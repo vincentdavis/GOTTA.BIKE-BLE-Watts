@@ -51,6 +51,11 @@ and cadence to head units, Zwift, Garmin/Wahoo apps, and nRF Connect. It is a
   background discovery — it is an OS limitation, not a bug.
 - Android requires chipset advertiser support; check
   `UniversalBlePeripheral.getCapabilities().supportsPeripheralMode` at runtime.
+- iOS deployment target must be >= 13.1 (`universal_ble` is resolved via Swift
+  Package Manager and requires it). This project pins 14.0 in
+  `ios/Runner.xcodeproj/project.pbxproj`. Re-running `flutter create` resets it
+  to 13.0 and breaks the iOS build with a "minimum platform version" error —
+  bump it back to 14.0.
 
 ## Conventions
 - Keep `cpm_codec.dart` pure and unit-testable; add tests there when changing
