@@ -1,0 +1,23 @@
+# Android release signing — TEMPLATE.
+#
+# 1. Generate your own keystore (choose your own passwords when prompted):
+#
+#      keytool -genkey -v -keystore ~/cps-emulator-upload.jks \
+#        -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+#
+#    Keep the .jks file OUTSIDE this repo and back it up somewhere safe — if you
+#    lose it you can never ship an update to the same Play Store listing.
+#
+# 2. Copy this file to `key.properties` (which is gitignored) and fill in the
+#    real values below. Never commit `key.properties` or the .jks file.
+#
+#      cp android/key.properties.example android/key.properties
+#
+# storeFile   absolute path to the .jks you generated in step 1
+# storePassword / keyPassword   the passwords you chose (often the same)
+# keyAlias    the -alias from step 1 (e.g. "upload")
+
+storePassword=CHANGEME
+keyPassword=CHANGEME
+keyAlias=upload
+storeFile=/absolute/path/to/cps-emulator-upload.jks
