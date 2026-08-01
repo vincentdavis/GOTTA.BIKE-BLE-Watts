@@ -5,6 +5,8 @@ import 'package:universal_ble/universal_ble.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'cps_peripheral.dart';
+import 'presets.dart';
+import 'settings_page.dart';
 
 const Duration kNotifyInterval = Duration(milliseconds: 500);
 
@@ -35,6 +37,7 @@ class EmulatorPage extends StatefulWidget {
 
 class _EmulatorPageState extends State<EmulatorPage> {
   final CyclingPowerPeripheral _peripheral = CyclingPowerPeripheral();
+  final PresetStore _presetStore = PresetStore();
 
   double _power = 200; // watts
   double _cadence = 90; // rpm
@@ -42,6 +45,7 @@ class _EmulatorPageState extends State<EmulatorPage> {
   bool _advertising = false;
   int _subscribers = 0;
   String _status = 'Initializing…';
+  List<Preset> _presets = List.of(PresetStore.defaults);
 
   Timer? _notifyTimer;
   StreamSubscription? _subSub;
@@ -51,6 +55,7 @@ class _EmulatorPageState extends State<EmulatorPage> {
   void initState() {
     super.initState();
     _init();
+    _loadPresets();
   }
 
   Future<void> _init() async {
@@ -134,6 +139,32 @@ class _EmulatorPageState extends State<EmulatorPage> {
     }
   }
 
+  Future<void> _loadPresets() async {
+    final presets = await _presetStore.load();
+    if (mounted) setState(() => _presets = presets);
+  }
+
+  void _applyPreset(Preset preset) {
+    setState(() {
+      _power = preset.power.toDouble();
+      _cadence = preset.cadence.toDouble();
+    });
+  }
+
+  Future<void> _openSettings() {
+    return Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SettingsPage(
+          presets: _presets,
+          onChanged: (presets) {
+            setState(() => _presets = presets);
+            _presetStore.save(presets);
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _notifyTimer?.cancel();
@@ -150,8 +181,17 @@ class _EmulatorPageState extends State<EmulatorPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Cycling Power Emulator')),
-      body: Padding(
+      appBar: AppBar(
+        title: const Text('Cycling Power Emulator'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Settings',
+            onPressed: _openSettings,
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -163,6 +203,15 @@ class _EmulatorPageState extends State<EmulatorPage> {
               advertising: _advertising,
             ),
             const SizedBox(height: 24),
+            if (_presets.isNotEmpty) ...[
+              _PresetBar(
+                presets: _presets,
+                currentPower: _power.round(),
+                currentCadence: _cadence.round(),
+                onSelected: _applyPreset,
+              ),
+              const SizedBox(height: 20),
+            ],
             _AdjustControl(
               label: 'Power',
               unit: 'W',
@@ -405,6 +454,87 @@ class _StepButton extends StatelessWidget {
           ),
           child: Icon(icon, size: 30, color: scheme.onPrimaryContainer),
         ),
+      ),
+    );
+  }
+}
+
+/// Horizontal, wrapping row of preset chips on the main screen. Tapping a chip
+/// applies its (power, cadence); the chip matching the current values is shown
+/// as selected.
+class _PresetBar extends StatelessWidget {
+  const _PresetBar({
+    required this.presets,
+    required this.currentPower,
+    required this.currentCadence,
+    required this.onSelected,
+  });
+
+  final List<Preset> presets;
+  final int currentPower;
+  final int currentCadence;
+  final ValueChanged<Preset> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Presets', style: theme.textTheme.bodySmall),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final preset in presets)
+              _PresetChip(
+                preset: preset,
+                selected:
+                    preset.power == currentPower &&
+                    preset.cadence == currentCadence,
+                onTap: () => onSelected(preset),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _PresetChip extends StatelessWidget {
+  const _PresetChip({
+    required this.preset,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final Preset preset;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ChoiceChip(
+      selected: selected,
+      showCheckmark: false,
+      onSelected: (_) => onTap(),
+      label: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            preset.displayLabel,
+            style: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            '${preset.power} W · ${preset.cadence} rpm',
+            style: theme.textTheme.bodySmall,
+          ),
+        ],
       ),
     );
   }

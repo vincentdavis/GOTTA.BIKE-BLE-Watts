@@ -9,6 +9,8 @@ and cadence to head units, Zwift, Garmin/Wahoo apps, and nRF Connect. It is a
 ## Stack
 - Flutter (Dart >=3.1.3, Flutter >=3.3.0)
 - BLE: `universal_ble` ^2.0.4 — peripheral / GATT-server + advertising
+- `wakelock_plus` (keep screen on while advertising); `shared_preferences`
+  (persist user presets)
 - Material 3, dark theme. No state-management package; plain `StatefulWidget`.
 
 ## Layout
@@ -20,8 +22,13 @@ and cadence to head units, Zwift, Garmin/Wahoo apps, and nRF Connect. It is a
   read handlers for Feature (`0x2A65`) / Sensor Location (`0x2A5B`), advertising,
   and the notify push on `0x2A63`.
 - `lib/main.dart` — UI: +/- stepper controls for power (step 5 W) and cadence
-  (step 1 rpm), start/stop advertising, live subscriber count. A 500 ms timer
-  reads the current values and pushes a measurement each tick.
+  (step 1 rpm), start/stop advertising, live subscriber count, and a row of
+  preset chips (tap to set power+cadence). A 500 ms timer reads the current
+  values and pushes a measurement each tick.
+- `lib/presets.dart` — pure `Preset` (power, cadence) model + `PresetStore`
+  (`shared_preferences` persistence, max 5, sensible defaults). Keep the model
+  pure/testable like `cpm_codec.dart`.
+- `lib/settings_page.dart` — Settings screen to add/edit/delete the presets.
 
 ## Protocol invariants (do not break)
 - CPM packet (`0x2A63`) is little-endian: uint16 flags (`0x0020` = crank data
