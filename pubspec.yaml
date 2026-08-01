@@ -38,6 +38,10 @@ dependencies:
   # BLE peripheral / GATT-server + advertising. Keep at ^2.0.4 (see CLAUDE.md).
   universal_ble: ^2.0.4
 
+  # Keeps the screen on while advertising so Android doesn't suspend the app
+  # (freezing the notify timer + BLE peripheral) when the screen would sleep.
+  wakelock_plus: ^1.7.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

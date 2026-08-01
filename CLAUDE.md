@@ -51,6 +51,12 @@ and cadence to head units, Zwift, Garmin/Wahoo apps, and nRF Connect. It is a
   background discovery — it is an OS limitation, not a bug.
 - Android requires chipset advertiser support; check
   `UniversalBlePeripheral.getCapabilities().supportsPeripheralMode` at runtime.
+- A backgrounded / screen-off Flutter app is suspended by Android: the 500 ms
+  notify timer and the BLE peripheral freeze, so the central (e.g. Zwift) drops
+  the link after its supervision timeout. The app holds a wakelock
+  (`wakelock_plus`, enabled in `_toggleAdvertising` while advertising) to keep
+  the screen on and the process foregrounded. True screen-off operation would
+  require an Android foreground service (not implemented).
 - iOS deployment target must be >= 13.1 (`universal_ble` is resolved via Swift
   Package Manager and requires it). This project pins 14.0 in
   `ios/Runner.xcodeproj/project.pbxproj`. Re-running `flutter create` resets it

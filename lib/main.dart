@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:universal_ble/universal_ble.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'cps_peripheral.dart';
 
@@ -103,6 +104,7 @@ class _EmulatorPageState extends State<EmulatorPage> {
       if (_advertising) {
         _notifyTimer?.cancel();
         await _peripheral.stopAdvertising();
+        await WakelockPlus.disable();
         setState(() {
           _advertising = false;
           _subscribers = 0;
@@ -111,6 +113,10 @@ class _EmulatorPageState extends State<EmulatorPage> {
       } else {
         _peripheral.crank.reset();
         await _peripheral.startAdvertising();
+        // Keep the screen on while advertising. A backgrounded / screen-off
+        // Flutter app is suspended by Android, which freezes the notify timer
+        // and the BLE peripheral — the central then drops the link.
+        await WakelockPlus.enable();
         _notifyTimer = Timer.periodic(kNotifyInterval, (_) {
           _peripheral.pushMeasurement(
             powerWatts: _power.round(),
@@ -135,6 +141,7 @@ class _EmulatorPageState extends State<EmulatorPage> {
     _advSub?.cancel();
     if (_advertising) {
       unawaited(_peripheral.stopAdvertising().catchError((_) {}));
+      unawaited(WakelockPlus.disable().catchError((_) {}));
     }
     super.dispose();
   }
