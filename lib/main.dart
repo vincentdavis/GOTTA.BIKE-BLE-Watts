@@ -5,10 +5,16 @@ import 'package:universal_ble/universal_ble.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'cps_peripheral.dart';
+import 'power_profile.dart';
 import 'presets.dart';
+import 'profile_player.dart';
 import 'settings_page.dart';
 
 const Duration kNotifyInterval = Duration(milliseconds: 500);
+
+/// Whether the main screen drives the broadcast from the manual steppers or a
+/// scripted test profile.
+enum _Mode { manual, profile }
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,6 +44,7 @@ class EmulatorPage extends StatefulWidget {
 class _EmulatorPageState extends State<EmulatorPage> {
   final CyclingPowerPeripheral _peripheral = CyclingPowerPeripheral();
   final PresetStore _presetStore = PresetStore();
+  final PowerProfile _profile = kCdaCrrMassProfile;
 
   double _power = 200; // watts
   double _cadence = 90; // rpm
@@ -46,6 +53,10 @@ class _EmulatorPageState extends State<EmulatorPage> {
   int _subscribers = 0;
   String _status = 'Initializing…';
   List<Preset> _presets = List.of(PresetStore.defaults);
+
+  _Mode _mode = _Mode.manual;
+  bool _profileRunning = false;
+  double _profileElapsed = 0; // seconds into the active profile
 
   Timer? _notifyTimer;
   StreamSubscription? _subSub;
@@ -122,13 +133,7 @@ class _EmulatorPageState extends State<EmulatorPage> {
         // Flutter app is suspended by Android, which freezes the notify timer
         // and the BLE peripheral — the central then drops the link.
         await WakelockPlus.enable();
-        _notifyTimer = Timer.periodic(kNotifyInterval, (_) {
-          _peripheral.pushMeasurement(
-            powerWatts: _power.round(),
-            cadenceRpm: _cadence,
-            dtSeconds: kNotifyInterval.inMilliseconds / 1000.0,
-          );
-        });
+        _notifyTimer = Timer.periodic(kNotifyInterval, _onTick);
         setState(() {
           _advertising = true;
           _status = 'Advertising as "Claude Power".';
@@ -137,6 +142,49 @@ class _EmulatorPageState extends State<EmulatorPage> {
     } catch (e) {
       setState(() => _status = 'Error: $e');
     }
+  }
+
+  /// One measurement push per tick, driven by the running profile if any,
+  /// otherwise by the manual power/cadence.
+  void _onTick(Timer _) {
+    final dt = kNotifyInterval.inMilliseconds / 1000.0;
+    int power;
+    double cadence;
+    if (_profileRunning) {
+      final s = _profile.sampleAt(_profileElapsed);
+      power = s.power;
+      cadence = s.cadence.toDouble();
+      _profileElapsed += dt;
+      if (_profileElapsed >= _profile.totalSec) {
+        _profileElapsed = _profile.totalSec.toDouble();
+        _profileRunning = false;
+        _status = 'Profile complete.';
+      }
+      if (mounted) setState(() {});
+    } else {
+      power = _power.round();
+      cadence = _cadence;
+    }
+    _peripheral.pushMeasurement(
+      powerWatts: power,
+      cadenceRpm: cadence,
+      dtSeconds: dt,
+    );
+  }
+
+  void _startProfile() {
+    setState(() {
+      _profileElapsed = 0;
+      _profileRunning = true;
+      _status = 'Running "${_profile.name}"…';
+    });
+  }
+
+  void _stopProfile() {
+    setState(() {
+      _profileRunning = false;
+      _status = 'Profile stopped.';
+    });
   }
 
   Future<void> _loadPresets() async {
@@ -180,6 +228,9 @@ class _EmulatorPageState extends State<EmulatorPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final sample = _profileRunning ? _profile.sampleAt(_profileElapsed) : null;
+    final shownPower = sample?.power ?? _power.round();
+    final shownCadence = sample?.cadence ?? _cadence.round();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Cycling Power Emulator'),
@@ -197,40 +248,69 @@ class _EmulatorPageState extends State<EmulatorPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _ReadoutCard(
-              power: _power.round(),
-              cadence: _cadence.round(),
+              power: shownPower,
+              cadence: shownCadence,
               subscribers: _subscribers,
               advertising: _advertising,
             ),
-            const SizedBox(height: 24),
-            if (_presets.isNotEmpty) ...[
-              _PresetBar(
-                presets: _presets,
-                currentPower: _power.round(),
-                currentCadence: _cadence.round(),
-                onSelected: _applyPreset,
+            const SizedBox(height: 20),
+            SegmentedButton<_Mode>(
+              segments: const [
+                ButtonSegment(
+                  value: _Mode.manual,
+                  label: Text('Manual'),
+                  icon: Icon(Icons.tune),
+                ),
+                ButtonSegment(
+                  value: _Mode.profile,
+                  label: Text('Test profile'),
+                  icon: Icon(Icons.timeline),
+                ),
+              ],
+              selected: {_mode},
+              onSelectionChanged: _profileRunning
+                  ? null
+                  : (s) => setState(() => _mode = s.first),
+            ),
+            const SizedBox(height: 20),
+            if (_mode == _Mode.manual) ...[
+              if (_presets.isNotEmpty) ...[
+                _PresetBar(
+                  presets: _presets,
+                  currentPower: _power.round(),
+                  currentCadence: _cadence.round(),
+                  onSelected: _applyPreset,
+                ),
+                const SizedBox(height: 20),
+              ],
+              _AdjustControl(
+                label: 'Power',
+                unit: 'W',
+                value: _power,
+                min: 0,
+                max: 800,
+                step: 5,
+                onChanged: (v) => setState(() => _power = v),
               ),
-              const SizedBox(height: 20),
-            ],
-            _AdjustControl(
-              label: 'Power',
-              unit: 'W',
-              value: _power,
-              min: 0,
-              max: 800,
-              step: 5,
-              onChanged: (v) => setState(() => _power = v),
-            ),
-            const SizedBox(height: 10),
-            _AdjustControl(
-              label: 'Cadence',
-              unit: 'rpm',
-              value: _cadence,
-              min: 0,
-              max: 150,
-              step: 1,
-              onChanged: (v) => setState(() => _cadence = v),
-            ),
+              const SizedBox(height: 10),
+              _AdjustControl(
+                label: 'Cadence',
+                unit: 'rpm',
+                value: _cadence,
+                min: 0,
+                max: 150,
+                step: 1,
+                onChanged: (v) => setState(() => _cadence = v),
+              ),
+            ] else
+              ProfilePlayerView(
+                profile: _profile,
+                running: _profileRunning,
+                elapsedSec: _profileElapsed,
+                canRun: _advertising,
+                onRun: _startProfile,
+                onStop: _stopProfile,
+              ),
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed: _supported ? _toggleAdvertising : null,

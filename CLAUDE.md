@@ -21,14 +21,22 @@ and cadence to head units, Zwift, Garmin/Wahoo apps, and nRF Connect. It is a
 - `lib/cps_peripheral.dart` — `universal_ble` glue: defines the CPS GATT service,
   read handlers for Feature (`0x2A65`) / Sensor Location (`0x2A5B`), advertising,
   and the notify push on `0x2A63`.
-- `lib/main.dart` — UI: +/- stepper controls for power (step 5 W) and cadence
-  (step 1 rpm), start/stop advertising, live subscriber count, and a row of
-  preset chips (tap to set power+cadence). A 500 ms timer reads the current
-  values and pushes a measurement each tick.
+- `lib/main.dart` — UI with a Manual / Test-profile mode switch. Manual: +/-
+  stepper controls for power (step 5 W) and cadence (step 1 rpm) plus preset
+  chips. Test-profile: plays a scripted `PowerProfile`. Also start/stop
+  advertising and a live subscriber count. A 500 ms timer (`_onTick`) pushes a
+  measurement each tick, driven by the running profile if any, else the manual
+  values.
 - `lib/presets.dart` — pure `Preset` (power, cadence) model + `PresetStore`
   (`shared_preferences` persistence, max 5, sensible defaults). Keep the model
   pure/testable like `cpm_codec.dart`.
 - `lib/settings_page.dart` — Settings screen to add/edit/delete the presets.
+- `lib/power_profile.dart` — pure `PowerProfile` / `ProfileSegment` model
+  (timed power/cadence segments, ramps, coasts; `sampleAt(t)`) + the built-in
+  `kCdaCrrMassProfile`. Pure/testable like `cpm_codec.dart`.
+- `lib/profile_player.dart` — `ProfilePlayerView` (a power-vs-time
+  `CustomPaint` chart with a live playhead, progress, Run/Stop, and a segment
+  list). Stateless; playback state lives in `_EmulatorPageState`.
 
 ## Protocol invariants (do not break)
 - CPM packet (`0x2A63`) is little-endian: uint16 flags (`0x0020` = crank data
