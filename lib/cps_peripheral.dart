@@ -6,11 +6,13 @@
 /// in [CpmCodec]; all cadence maths live in [CrankSimulator] — keep it that way.
 library;
 
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:universal_ble/universal_ble.dart';
 
 import 'cpm_codec.dart';
+import 'device_identity.dart';
 
 /// Thin wrapper around `UniversalBlePeripheral` that emulates a standard
 /// Cycling Power sensor ("Claude Power").
@@ -26,8 +28,26 @@ class CyclingPowerPeripheral {
   static const String locationChar =
       '00002a5b-0000-1000-8000-00805f9b34fb'; // Sensor Location (read)
 
-  /// Advertised local name.
-  static const String deviceName = 'Claude Power';
+  // Device Information Service (0x180A): identifies the "device".
+  static const String disService = '0000180a-0000-1000-8000-00805f9b34fb';
+  static const String manufacturerChar =
+      '00002a29-0000-1000-8000-00805f9b34fb'; // Manufacturer Name String (read)
+  static const String modelChar =
+      '00002a24-0000-1000-8000-00805f9b34fb'; // Model Number String (read)
+
+  /// Advertised local name + Device-Information strings, editable via
+  /// [applyIdentity]. The MAC address is OS-assigned and not settable here.
+  String deviceName = DeviceIdentity.defaults.advertName;
+  String manufacturer = DeviceIdentity.defaults.manufacturer;
+  String model = DeviceIdentity.defaults.model;
+
+  /// Applies a user-chosen [DeviceIdentity]. Manufacturer/model take effect on
+  /// the next GATT read; a new name applies the next time advertising starts.
+  void applyIdentity(DeviceIdentity id) {
+    deviceName = id.advertName;
+    manufacturer = id.manufacturer;
+    model = id.model;
+  }
 
   /// Turns the target cadence into honest crank counters. Reset per session.
   final CrankSimulator crank = CrankSimulator();
@@ -58,6 +78,16 @@ class CyclingPowerPeripheral {
       if (BleUuidParser.compareStrings(characteristicId, locationChar)) {
         return PeripheralReadRequestResult(value: CpmCodec.sensorLocation);
       }
+      if (BleUuidParser.compareStrings(characteristicId, manufacturerChar)) {
+        return PeripheralReadRequestResult(
+          value: Uint8List.fromList(utf8.encode(manufacturer)),
+        );
+      }
+      if (BleUuidParser.compareStrings(characteristicId, modelChar)) {
+        return PeripheralReadRequestResult(
+          value: Uint8List.fromList(utf8.encode(model)),
+        );
+      }
       return PeripheralReadRequestResult(value: Uint8List(0));
     });
 
@@ -78,6 +108,26 @@ class CyclingPowerPeripheral {
           ),
           BlePeripheralCharacteristic(
             uuid: locationChar,
+            properties: [CharacteristicProperty.read],
+            permissions: [PeripheralAttributePermission.readable],
+          ),
+        ],
+      ),
+    );
+
+    // Device Information Service: Manufacturer Name + Model Number (read).
+    await UniversalBlePeripheral.addService(
+      BlePeripheralService(
+        uuid: disService,
+        primary: true,
+        characteristics: [
+          BlePeripheralCharacteristic(
+            uuid: manufacturerChar,
+            properties: [CharacteristicProperty.read],
+            permissions: [PeripheralAttributePermission.readable],
+          ),
+          BlePeripheralCharacteristic(
+            uuid: modelChar,
             properties: [CharacteristicProperty.read],
             permissions: [PeripheralAttributePermission.readable],
           ),

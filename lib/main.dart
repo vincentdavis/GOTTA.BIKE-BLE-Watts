@@ -5,6 +5,7 @@ import 'package:universal_ble/universal_ble.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'cps_peripheral.dart';
+import 'device_identity.dart';
 import 'power_profile.dart';
 import 'presets.dart';
 import 'profile_player.dart';
@@ -44,6 +45,7 @@ class EmulatorPage extends StatefulWidget {
 class _EmulatorPageState extends State<EmulatorPage> {
   final CyclingPowerPeripheral _peripheral = CyclingPowerPeripheral();
   final PresetStore _presetStore = PresetStore();
+  final DeviceIdentityStore _identityStore = DeviceIdentityStore();
   final PowerProfile _profile = kCdaCrrMassProfile;
 
   double _power = 200; // watts
@@ -53,6 +55,7 @@ class _EmulatorPageState extends State<EmulatorPage> {
   int _subscribers = 0;
   String _status = 'Initializing…';
   List<Preset> _presets = List.of(PresetStore.defaults);
+  DeviceIdentity _identity = DeviceIdentity.defaults;
 
   _Mode _mode = _Mode.manual;
   bool _profileRunning = false;
@@ -67,6 +70,7 @@ class _EmulatorPageState extends State<EmulatorPage> {
     super.initState();
     _init();
     _loadPresets();
+    _loadIdentity();
   }
 
   Future<void> _init() async {
@@ -136,7 +140,7 @@ class _EmulatorPageState extends State<EmulatorPage> {
         _notifyTimer = Timer.periodic(kNotifyInterval, _onTick);
         setState(() {
           _advertising = true;
-          _status = 'Advertising as "Claude Power".';
+          _status = 'Advertising as "${_peripheral.deviceName}".';
         });
       }
     } catch (e) {
@@ -192,6 +196,12 @@ class _EmulatorPageState extends State<EmulatorPage> {
     if (mounted) setState(() => _presets = presets);
   }
 
+  Future<void> _loadIdentity() async {
+    final identity = await _identityStore.load();
+    _peripheral.applyIdentity(identity);
+    if (mounted) setState(() => _identity = identity);
+  }
+
   void _applyPreset(Preset preset) {
     setState(() {
       _power = preset.power.toDouble();
@@ -203,6 +213,12 @@ class _EmulatorPageState extends State<EmulatorPage> {
     return Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => SettingsPage(
+          identity: _identity,
+          onIdentityChanged: (identity) {
+            _peripheral.applyIdentity(identity);
+            _identityStore.save(identity);
+            setState(() => _identity = identity);
+          },
           presets: _presets,
           onChanged: (presets) {
             setState(() => _presets = presets);

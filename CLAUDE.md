@@ -18,9 +18,11 @@ and cadence to head units, Zwift, Garmin/Wahoo apps, and nRF Connect. It is a
   cadence into honest crank counters; `CpmCodec` packs the 8-byte `0x2A63` packet.
   Keep this free of any `universal_ble` imports so the BLE library can be swapped
   without touching protocol logic.
-- `lib/cps_peripheral.dart` — `universal_ble` glue: defines the CPS GATT service,
-  read handlers for Feature (`0x2A65`) / Sensor Location (`0x2A5B`), advertising,
-  and the notify push on `0x2A63`.
+- `lib/cps_peripheral.dart` — `universal_ble` glue: defines the CPS GATT service
+  plus a Device Information Service (`0x180A`), read handlers for Feature
+  (`0x2A65`) / Sensor Location (`0x2A5B`) / Manufacturer (`0x2A29`) / Model
+  (`0x2A24`), advertising under the editable device name, and the notify push on
+  `0x2A63`.
 - `lib/main.dart` — UI with a Manual / Test-profile mode switch. Manual: +/-
   stepper controls for power (step 5 W) and cadence (step 1 rpm) plus preset
   chips. Test-profile: plays a scripted `PowerProfile`. Also start/stop
@@ -30,7 +32,11 @@ and cadence to head units, Zwift, Garmin/Wahoo apps, and nRF Connect. It is a
 - `lib/presets.dart` — pure `Preset` (power, cadence) model + `PresetStore`
   (`shared_preferences` persistence, max 5, sensible defaults). Keep the model
   pure/testable like `cpm_codec.dart`.
-- `lib/settings_page.dart` — Settings screen to add/edit/delete the presets.
+- `lib/settings_page.dart` — Settings screen: edit the device identity (name,
+  manufacturer, model) and add/edit/delete the presets.
+- `lib/device_identity.dart` — pure `DeviceIdentity` (advertised name +
+  Manufacturer/Model for the DIS) + `DeviceIdentityStore` (`shared_preferences`).
+  The MAC address is OS-assigned and not settable.
 - `lib/power_profile.dart` — pure `PowerProfile` / `ProfileSegment` model
   (timed power/cadence segments, ramps, coasts; `sampleAt(t)`) + the built-in
   `kCdaCrrMassProfile`. Pure/testable like `cpm_codec.dart`.

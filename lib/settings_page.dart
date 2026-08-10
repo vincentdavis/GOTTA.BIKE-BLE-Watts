@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
 
+import 'device_identity.dart';
 import 'presets.dart';
 
-/// Settings screen for managing the quick-select presets.
+/// Settings screen: the BLE device identity and the quick-select presets.
 ///
-/// Edits a local copy and calls [onChanged] after every mutation so the caller
-/// can update the main screen and persist immediately (no explicit "save").
+/// Edits local copies and calls the change callbacks after every mutation so
+/// the caller can update the main screen and persist immediately.
 class SettingsPage extends StatefulWidget {
   const SettingsPage({
     super.key,
+    required this.identity,
+    required this.onIdentityChanged,
     required this.presets,
     required this.onChanged,
   });
 
+  final DeviceIdentity identity;
+  final ValueChanged<DeviceIdentity> onIdentityChanged;
   final List<Preset> presets;
   final ValueChanged<List<Preset>> onChanged;
 
@@ -71,6 +76,22 @@ class _SettingsPageState extends State<SettingsPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          Text('Device identity', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text(
+            'How the sensor appears to Zwift and other apps. Cosmetic — it does '
+            'not affect measurements. The MAC address is set by the phone and '
+            'cannot be changed.',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: 12),
+          _DeviceIdentitySection(
+            identity: widget.identity,
+            onChanged: widget.onIdentityChanged,
+          ),
+          const SizedBox(height: 8),
+          const Divider(),
+          const SizedBox(height: 8),
           Text('Quick-select levels', style: theme.textTheme.titleMedium),
           const SizedBox(height: 4),
           Text(
@@ -123,6 +144,95 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Editable device name, manufacturer and model, plus a read-only note about
+/// the OS-controlled MAC. Emits an updated [DeviceIdentity] on every edit.
+class _DeviceIdentitySection extends StatefulWidget {
+  const _DeviceIdentitySection({
+    required this.identity,
+    required this.onChanged,
+  });
+
+  final DeviceIdentity identity;
+  final ValueChanged<DeviceIdentity> onChanged;
+
+  @override
+  State<_DeviceIdentitySection> createState() => _DeviceIdentitySectionState();
+}
+
+class _DeviceIdentitySectionState extends State<_DeviceIdentitySection> {
+  late final TextEditingController _name = TextEditingController(
+    text: widget.identity.name,
+  );
+  late final TextEditingController _manufacturer = TextEditingController(
+    text: widget.identity.manufacturer,
+  );
+  late final TextEditingController _model = TextEditingController(
+    text: widget.identity.model,
+  );
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _manufacturer.dispose();
+    _model.dispose();
+    super.dispose();
+  }
+
+  void _emit() => widget.onChanged(
+    DeviceIdentity(
+      name: _name.text,
+      manufacturer: _manufacturer.text,
+      model: _model.text,
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: _name,
+          textCapitalization: TextCapitalization.words,
+          maxLength: kMaxDeviceNameLength,
+          decoration: const InputDecoration(
+            labelText: 'Device name (advertised)',
+            helperText:
+                'Shown in Zwift’s pairing list. Applies next time you start '
+                'advertising.',
+          ),
+          onChanged: (_) => _emit(),
+        ),
+        TextField(
+          controller: _manufacturer,
+          textCapitalization: TextCapitalization.words,
+          maxLength: kMaxIdentityFieldLength,
+          decoration: const InputDecoration(labelText: 'Manufacturer'),
+          onChanged: (_) => _emit(),
+        ),
+        TextField(
+          controller: _model,
+          textCapitalization: TextCapitalization.words,
+          maxLength: kMaxIdentityFieldLength,
+          decoration: const InputDecoration(labelText: 'Model number'),
+          onChanged: (_) => _emit(),
+        ),
+        const SizedBox(height: 8),
+        const ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.bluetooth),
+          title: Text('Bluetooth address (MAC)'),
+          subtitle: Text(
+            'Assigned and randomised by Android — not readable in-app and not '
+            'changeable. Scan from another device (e.g. nRF Connect) to see it.',
+          ),
+          dense: true,
+        ),
+      ],
     );
   }
 }
