@@ -37,9 +37,9 @@ class DeviceIdentity {
   final String model;
 
   static const DeviceIdentity defaults = DeviceIdentity(
-    name: 'Claude Power',
-    manufacturer: 'Claude',
-    model: 'CPS Emulator',
+    name: 'GOTTA.BIKE Watts',
+    manufacturer: 'GOTTA.BIKE',
+    model: 'BLE Watts',
   );
 
   /// The name to advertise: trimmed, non-empty (falls back to the default), and

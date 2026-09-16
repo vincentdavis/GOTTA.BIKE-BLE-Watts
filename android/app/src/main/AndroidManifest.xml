@@ -22,7 +22,7 @@
         android:required="true" />
 
     <application
-        android:label="cps_emulator"
+        android:label="GOTTA.BIKE: BLE Watts"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

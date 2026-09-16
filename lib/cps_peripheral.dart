@@ -15,7 +15,7 @@ import 'cpm_codec.dart';
 import 'device_identity.dart';
 
 /// Thin wrapper around `UniversalBlePeripheral` that emulates a standard
-/// Cycling Power sensor ("Claude Power").
+/// Cycling Power sensor (advertised as "GOTTA.BIKE Watts" by default).
 class CyclingPowerPeripheral {
   // 16-bit SIG UUIDs expanded onto the Bluetooth Base UUID. Centrals report
   // 128-bit lowercase UUIDs, so compare with [BleUuidParser.compare].

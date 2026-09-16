@@ -65,7 +65,7 @@ and cadence to head units, Zwift, Garmin/Wahoo apps, and nRF Connect. It is a
 ## Testing constraints
 - BLE peripheral mode does NOT work in the iOS Simulator or Android emulator.
   All BLE testing requires a physical device. Fastest correctness check: run
-  `nRF Connect` on a second phone/PC, scan for "Claude Power", read
+  `nRF Connect` on a second phone/PC, scan for "GOTTA.BIKE Watts", read
   `0x2A65`/`0x2A5B`, subscribe to `0x2A63`, watch the 8-byte packets.
 - iOS advertises standard 16-bit service UUIDs only in the FOREGROUND; a
   backgrounded iPhone is invisible to non-Apple centrals. Do not try to "fix"

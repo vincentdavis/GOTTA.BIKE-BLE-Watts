@@ -28,7 +28,7 @@ class CpsEmulatorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'CPS Emulator',
+      title: 'GOTTA.BIKE: BLE Watts',
       theme: ThemeData.dark(useMaterial3: true),
       home: const EmulatorPage(),
     );
@@ -249,7 +249,7 @@ class _EmulatorPageState extends State<EmulatorPage> {
     final shownCadence = sample?.cadence ?? _cadence.round();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cycling Power Emulator'),
+        title: const Text('GOTTA.BIKE: BLE Watts'),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
