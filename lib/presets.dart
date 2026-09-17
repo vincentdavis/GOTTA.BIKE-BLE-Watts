@@ -9,9 +9,11 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Upper bounds for a preset, matching the main screen's steppers.
-const int kPowerMax = 800; // watts
-const int kCadenceMax = 150; // rpm
+import 'limits.dart';
+
+// The preset bounds (kPowerMax, kCadenceMax) live in the pure limits.dart;
+// re-exported so existing importers of this file keep compiling.
+export 'limits.dart';
 
 /// Maximum number of presets the user may define.
 const int kMaxPresets = 5;

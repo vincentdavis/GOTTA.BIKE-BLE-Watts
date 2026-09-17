@@ -8,7 +8,9 @@ import 'cps_peripheral.dart';
 import 'device_identity.dart';
 import 'power_profile.dart';
 import 'presets.dart';
+import 'profile_picker.dart';
 import 'profile_player.dart';
+import 'profile_store.dart';
 import 'settings_page.dart';
 
 const Duration kNotifyInterval = Duration(milliseconds: 500);
@@ -46,7 +48,11 @@ class _EmulatorPageState extends State<EmulatorPage> {
   final CyclingPowerPeripheral _peripheral = CyclingPowerPeripheral();
   final PresetStore _presetStore = PresetStore();
   final DeviceIdentityStore _identityStore = DeviceIdentityStore();
-  final PowerProfile _profile = kCdaCrrMassProfile;
+  final ProfileStore _profileStore = ProfileStore();
+
+  /// The profile being played. Snapshotted from the library selection when a
+  /// run starts (the picker is locked while a profile runs).
+  PowerProfile _profile = kBuiltInProfiles.first;
 
   double _power = 200; // watts
   double _cadence = 90; // rpm
@@ -61,6 +67,13 @@ class _EmulatorPageState extends State<EmulatorPage> {
   bool _profileRunning = false;
   double _profileElapsed = 0; // seconds into the active profile
 
+  /// The profile library: the user's custom profiles and the selected id.
+  List<PowerProfile> _customProfiles = const [];
+  String _selectedProfileId = kBuiltInProfiles.first.id;
+
+  PowerProfile get _selectedProfile =>
+      resolveProfile(_selectedProfileId, _customProfiles);
+
   Timer? _notifyTimer;
   StreamSubscription? _subSub;
   StreamSubscription? _advSub;
@@ -71,6 +84,7 @@ class _EmulatorPageState extends State<EmulatorPage> {
     _init();
     _loadPresets();
     _loadIdentity();
+    _loadProfiles();
   }
 
   Future<void> _init() async {
@@ -178,6 +192,7 @@ class _EmulatorPageState extends State<EmulatorPage> {
 
   void _startProfile() {
     setState(() {
+      _profile = _selectedProfile;
       _profileElapsed = 0;
       _profileRunning = true;
       _status = 'Running "${_profile.name}"…';
@@ -200,6 +215,41 @@ class _EmulatorPageState extends State<EmulatorPage> {
     final identity = await _identityStore.load();
     _peripheral.applyIdentity(identity);
     if (mounted) setState(() => _identity = identity);
+  }
+
+  Future<void> _loadProfiles() async {
+    final library = await _profileStore.load();
+    if (!mounted) return;
+    setState(() {
+      _customProfiles = library.custom;
+      _selectedProfileId = library.selectedId;
+    });
+  }
+
+  void _selectProfile(String id) {
+    // Unknown ids (e.g. a just-deleted profile) fall back to the first built-in.
+    final resolved = resolveProfile(id, _customProfiles).id;
+    setState(() => _selectedProfileId = resolved);
+    _profileStore.saveSelectedId(resolved);
+  }
+
+  void _setCustomProfiles(List<PowerProfile> profiles) {
+    setState(() => _customProfiles = List.unmodifiable(profiles));
+    _profileStore.saveCustomProfiles(profiles);
+    if (findProfile(_selectedProfileId, profiles) == null) {
+      _selectProfile(kBuiltInProfiles.first.id);
+    }
+  }
+
+  Future<void> _openProfilePicker() async {
+    if (_profileRunning) return; // the library is locked while a profile runs
+    await showProfilePicker(
+      context: context,
+      customProfiles: _customProfiles,
+      selectedId: _selectedProfileId,
+      onSelected: _selectProfile,
+      onCustomProfilesChanged: _setCustomProfiles,
+    );
   }
 
   void _applyPreset(Preset preset) {
@@ -244,6 +294,7 @@ class _EmulatorPageState extends State<EmulatorPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final shownProfile = _profileRunning ? _profile : _selectedProfile;
     final sample = _profileRunning ? _profile.sampleAt(_profileElapsed) : null;
     final shownPower = sample?.power ?? _power.round();
     final shownCadence = sample?.cadence ?? _cadence.round();
@@ -304,7 +355,7 @@ class _EmulatorPageState extends State<EmulatorPage> {
                 unit: 'W',
                 value: _power,
                 min: 0,
-                max: 800,
+                max: kPowerMax.toDouble(),
                 step: 5,
                 onChanged: (v) => setState(() => _power = v),
               ),
@@ -314,18 +365,19 @@ class _EmulatorPageState extends State<EmulatorPage> {
                 unit: 'rpm',
                 value: _cadence,
                 min: 0,
-                max: 150,
+                max: kCadenceMax.toDouble(),
                 step: 1,
                 onChanged: (v) => setState(() => _cadence = v),
               ),
             ] else
               ProfilePlayerView(
-                profile: _profile,
+                profile: shownProfile,
                 running: _profileRunning,
                 elapsedSec: _profileElapsed,
                 canRun: _advertising,
                 onRun: _startProfile,
                 onStop: _stopProfile,
+                onChangeProfile: _openProfilePicker,
               ),
             const SizedBox(height: 24),
             FilledButton.icon(

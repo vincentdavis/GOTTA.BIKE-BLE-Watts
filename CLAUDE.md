@@ -25,7 +25,8 @@ and cadence to head units, Zwift, Garmin/Wahoo apps, and nRF Connect. It is a
   `0x2A63`.
 - `lib/main.dart` — UI with a Manual / Test-profile mode switch. Manual: +/-
   stepper controls for power (step 5 W) and cadence (step 1 rpm) plus preset
-  chips. Test-profile: plays a scripted `PowerProfile`. Also start/stop
+  chips. Test-profile: plays the `PowerProfile` selected in the profile
+  library (picker locked while a profile runs). Also start/stop
   advertising and a live subscriber count. A 500 ms timer (`_onTick`) pushes a
   measurement each tick, driven by the running profile if any, else the manual
   values.
@@ -37,12 +38,27 @@ and cadence to head units, Zwift, Garmin/Wahoo apps, and nRF Connect. It is a
 - `lib/device_identity.dart` — pure `DeviceIdentity` (advertised name +
   Manufacturer/Model for the DIS) + `DeviceIdentityStore` (`shared_preferences`).
   The MAC address is OS-assigned and not settable.
+- `lib/limits.dart` — pure shared bounds (`kPowerMax`, `kCadenceMax`);
+  `presets.dart` re-exports it. Pure files must import this, not
+  `presets.dart` (which pulls in `shared_preferences`).
 - `lib/power_profile.dart` — pure `PowerProfile` / `ProfileSegment` model
-  (timed power/cadence segments, ramps, coasts; `sampleAt(t)`) + the built-in
-  `kCdaCrrMassProfile`. Pure/testable like `cpm_codec.dart`.
+  (timed power/cadence segments, ramps, coasts; `sampleAt(t)`; stable ids;
+  built-in vs custom; JSON with clamping; `validate()`) + `kBuiltInProfiles`:
+  `kCdaCrrMassProfile` (tarmac) and `kSurfaceCrrProfile` (off-road Crr; its
+  doc comment records the forward-model validation). Pure/testable like
+  `cpm_codec.dart`.
+- `lib/profile_store.dart` — `ProfileStore` (`shared_preferences`): custom
+  profiles (max 20) and the selected profile id; corrupt data falls back to
+  the built-ins.
+- `lib/profile_picker.dart` — the profile library bottom sheet: select,
+  duplicate, edit/delete custom profiles (with undo), new profile.
+- `lib/profile_editor_page.dart` — create/edit a custom profile: live chart,
+  reorderable segments, segment dialog (ramp / coast toggles, clamped numeric
+  fields), validation on save, discard confirmation.
 - `lib/profile_player.dart` — `ProfilePlayerView` (a power-vs-time
-  `CustomPaint` chart with a live playhead, progress, Run/Stop, and a segment
-  list). Stateless; playback state lives in `_EmulatorPageState`.
+  `CustomPaint` chart with a live playhead, progress, Run/Stop, a segment
+  list, and the selected-profile card with a Change button). Stateless;
+  playback state lives in `_EmulatorPageState`.
 
 ## Protocol invariants (do not break)
 - CPM packet (`0x2A63`) is little-endian: uint16 flags (`0x0020` = crank data
