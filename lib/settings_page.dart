@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'device_identity.dart';
 import 'presets.dart';
+import 'sensor_config.dart';
 
-/// Settings screen: the BLE device identity and the quick-select presets.
+/// Settings screen: the emulated sensors, screen-off broadcasting, the BLE
+/// device identity and the quick-select presets.
 ///
 /// Edits local copies and calls the change callbacks after every mutation so
 /// the caller can update the main screen and persist immediately.
@@ -14,6 +17,11 @@ class SettingsPage extends StatefulWidget {
     required this.onIdentityChanged,
     required this.presets,
     required this.onChanged,
+    this.sensors = SensorConfig.defaults,
+    this.advertising = false,
+    this.onSensorsChanged,
+    this.screenOff = false,
+    this.onScreenOffChanged,
   });
 
   final DeviceIdentity identity;
@@ -21,12 +29,27 @@ class SettingsPage extends StatefulWidget {
   final List<Preset> presets;
   final ValueChanged<List<Preset>> onChanged;
 
+  /// The current sensor selection; the Sensors section is shown only when
+  /// [onSensorsChanged] is set.
+  final SensorConfig sensors;
+
+  /// While advertising, the set of services can't change (the wheel size can).
+  final bool advertising;
+  final ValueChanged<SensorConfig>? onSensorsChanged;
+
+  /// "Keep broadcasting with screen off"; the switch is shown only when
+  /// [onScreenOffChanged] is set (Android). It applies immediately, also
+  /// while advertising.
+  final bool screenOff;
+  final ValueChanged<bool>? onScreenOffChanged;
+
   @override
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
 class _SettingsPageState extends State<SettingsPage> {
   late final List<Preset> _items = List.of(widget.presets);
+  late bool _screenOff = widget.screenOff;
 
   void _commit() => widget.onChanged(List.of(_items));
 
@@ -76,6 +99,38 @@ class _SettingsPageState extends State<SettingsPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          if (widget.onSensorsChanged != null) ...[
+            _SensorsSection(
+              sensors: widget.sensors,
+              advertising: widget.advertising,
+              onChanged: widget.onSensorsChanged!,
+            ),
+            const SizedBox(height: 8),
+            const Divider(),
+            const SizedBox(height: 8),
+          ],
+          if (widget.onScreenOffChanged != null) ...[
+            Text('Screen off', style: theme.textTheme.titleMedium),
+            SwitchListTile(
+              key: const ValueKey('screen-off'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Keep broadcasting with screen off'),
+              subtitle: const Text(
+                'While broadcasting, keeps the phone awake and shows a '
+                'notification with a Stop button, so the screen can turn '
+                'off. Uses more battery. When this is off, the screen stays '
+                'on while broadcasting.',
+              ),
+              value: _screenOff,
+              onChanged: (value) {
+                setState(() => _screenOff = value);
+                widget.onScreenOffChanged!(value);
+              },
+            ),
+            const SizedBox(height: 8),
+            const Divider(),
+            const SizedBox(height: 8),
+          ],
           Text('Device identity', style: theme.textTheme.titleMedium),
           const SizedBox(height: 4),
           Text(
@@ -144,6 +199,142 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Switches for the emulated sensor services plus the wheel circumference.
+/// Emits an updated [SensorConfig] on every change. At least one service stays
+/// on, and services are locked while advertising.
+class _SensorsSection extends StatefulWidget {
+  const _SensorsSection({
+    required this.sensors,
+    required this.advertising,
+    required this.onChanged,
+  });
+
+  final SensorConfig sensors;
+  final bool advertising;
+  final ValueChanged<SensorConfig> onChanged;
+
+  @override
+  State<_SensorsSection> createState() => _SensorsSectionState();
+}
+
+class _SensorsSectionState extends State<_SensorsSection> {
+  late SensorConfig _config = widget.sensors;
+  late final TextEditingController _wheel = TextEditingController(
+    text: '${widget.sensors.wheelCircumferenceMm}',
+  );
+
+  @override
+  void dispose() {
+    _wheel.dispose();
+    super.dispose();
+  }
+
+  void _update(SensorConfig next) {
+    setState(() => _config = next);
+    widget.onChanged(next);
+  }
+
+  /// A switch's handler, or null when it must stay put: while advertising,
+  /// or when it is the last service still on.
+  ValueChanged<bool>? _toggle(bool on, SensorConfig Function(bool) apply) {
+    if (widget.advertising) return null;
+    if (on && _config.enabledCount == 1) return null;
+    return (value) => _update(apply(value));
+  }
+
+  String? get _wheelError {
+    final mm = int.tryParse(_wheel.text);
+    if (mm == null ||
+        mm < kWheelCircumferenceMinMm ||
+        mm > kWheelCircumferenceMaxMm) {
+      return 'Enter $kWheelCircumferenceMinMm–$kWheelCircumferenceMaxMm mm';
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = _config;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Sensors', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 4),
+        Text(
+          'Choose which standard Bluetooth sensors to emulate. At least one '
+          'stays on. With several on, the advertised name may be shortened to '
+          'fit the Bluetooth advertisement.',
+          style: theme.textTheme.bodySmall,
+        ),
+        if (widget.advertising) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Stop broadcasting to change sensors.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.error,
+            ),
+          ),
+        ],
+        SwitchListTile(
+          key: const ValueKey('sensor-power'),
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Cycling Power'),
+          subtitle: const Text('Power and cadence (service 0x1818)'),
+          value: c.cyclingPower,
+          onChanged: _toggle(
+            c.cyclingPower,
+            (v) => c.copyWith(cyclingPower: v),
+          ),
+        ),
+        SwitchListTile(
+          key: const ValueKey('sensor-heart-rate'),
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Heart Rate'),
+          subtitle: const Text('Heart rate with RR intervals (0x180D)'),
+          value: c.heartRate,
+          onChanged: _toggle(c.heartRate, (v) => c.copyWith(heartRate: v)),
+        ),
+        SwitchListTile(
+          key: const ValueKey('sensor-speed-cadence'),
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Speed & Cadence'),
+          subtitle: const Text('Wheel speed and crank cadence (0x1816)'),
+          value: c.speedCadence,
+          onChanged: _toggle(
+            c.speedCadence,
+            (v) => c.copyWith(speedCadence: v),
+          ),
+        ),
+        TextField(
+          key: const ValueKey('sensor-wheel'),
+          controller: _wheel,
+          enabled: c.speedCadence,
+          keyboardType: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(4),
+          ],
+          decoration: InputDecoration(
+            labelText: 'Wheel circumference',
+            suffixText: 'mm',
+            helperText: '$kDefaultWheelCircumferenceMm mm = 700x25c',
+            errorText: c.speedCadence ? _wheelError : null,
+          ),
+          onChanged: (text) {
+            final mm = int.tryParse(text);
+            if (_wheelError == null && mm != null) {
+              _update(c.copyWith(wheelCircumferenceMm: mm));
+            } else {
+              setState(() {}); // refresh the error text
+            }
+          },
+        ),
+      ],
     );
   }
 }

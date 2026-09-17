@@ -8,7 +8,11 @@ import 'cps_peripheral.dart';
 import 'device_identity.dart';
 import 'power_profile.dart';
 import 'presets.dart';
+import 'profile_picker.dart';
 import 'profile_player.dart';
+import 'profile_store.dart';
+import 'screen_off_mode.dart';
+import 'sensor_config.dart';
 import 'settings_page.dart';
 
 const Duration kNotifyInterval = Duration(milliseconds: 500);
@@ -46,7 +50,24 @@ class _EmulatorPageState extends State<EmulatorPage> {
   final CyclingPowerPeripheral _peripheral = CyclingPowerPeripheral();
   final PresetStore _presetStore = PresetStore();
   final DeviceIdentityStore _identityStore = DeviceIdentityStore();
-  final PowerProfile _profile = kCdaCrrMassProfile;
+  final ProfileStore _profileStore = ProfileStore();
+  final SensorConfigStore _sensorStore = SensorConfigStore();
+  final ScreenOffStore _screenOffStore = ScreenOffStore();
+  final ScreenOffService _screenOffService = ScreenOffService();
+
+  /// Keeps the app running while advertising: the screen-off service when
+  /// [_screenOffEnabled], otherwise a screen wakelock.
+  late final KeepAwake _keepAwake = KeepAwake(
+    service: _screenOffService,
+    screenWakelock: (on) => on ? WakelockPlus.enable() : WakelockPlus.disable(),
+  );
+
+  /// "Keep broadcasting with screen off" (Settings; Android only).
+  bool _screenOffEnabled = false;
+
+  /// The profile being played. Snapshotted from the library selection when a
+  /// run starts (the picker is locked while a profile runs).
+  PowerProfile _profile = kBuiltInProfiles.first;
 
   double _power = 200; // watts
   double _cadence = 90; // rpm
@@ -57,24 +78,50 @@ class _EmulatorPageState extends State<EmulatorPage> {
   List<Preset> _presets = List.of(PresetStore.defaults);
   DeviceIdentity _identity = DeviceIdentity.defaults;
 
+  /// Enabled sensor services plus the manual heart rate / speed and wheel
+  /// size. Service changes are only allowed while not advertising.
+  SensorConfig _sensors = SensorConfig.defaults;
+
+  /// Debounces saving the manual heart rate / speed (the steppers repeat fast).
+  Timer? _sensorSaveTimer;
+
   _Mode _mode = _Mode.manual;
   bool _profileRunning = false;
   double _profileElapsed = 0; // seconds into the active profile
 
+  /// The profile library: the user's custom profiles and the selected id.
+  List<PowerProfile> _customProfiles = const [];
+  String _selectedProfileId = kBuiltInProfiles.first.id;
+
+  PowerProfile get _selectedProfile =>
+      resolveProfile(_selectedProfileId, _customProfiles);
+
   Timer? _notifyTimer;
   StreamSubscription? _subSub;
   StreamSubscription? _advSub;
+  StreamSubscription? _availabilitySub;
 
   @override
   void initState() {
     super.initState();
+    _screenOffService.onStopRequested = () {
+      if (_advertising) {
+        unawaited(_stopBroadcast('Stopped from the notification.'));
+      }
+    };
     _init();
     _loadPresets();
     _loadIdentity();
+    _loadProfiles();
+    _loadScreenOff();
   }
 
   Future<void> _init() async {
     try {
+      // The service selection must be known before the GATT server is set up.
+      final sensors = await _sensorStore.load();
+      if (!mounted) return;
+      setState(() => _sensors = sensors);
       await UniversalBle.requestPermissions(withAndroidFineLocation: false);
       if (!mounted) return;
       final supported = await _peripheral.isSupported();
@@ -86,27 +133,38 @@ class _EmulatorPageState extends State<EmulatorPage> {
         });
         return;
       }
-      await _peripheral.setup();
+      await _peripheral.setup(_sensors);
       if (!mounted) return;
 
       _subSub = UniversalBlePeripheral.characteristicSubscriptionStream.listen((
         event,
       ) async {
-        final subs = await UniversalBlePeripheral.getSubscribedClients(
-          CyclingPowerPeripheral.cpmChar,
-        );
-        if (mounted) setState(() => _subscribers = subs.length);
+        final count = await _peripheral.subscriberCount();
+        if (mounted) setState(() => _subscribers = count);
       });
 
-      _advSub = UniversalBlePeripheral.advertisingStateStream.listen((
-        event,
-      ) async {
-        final advertising = await _peripheral.isAdvertising();
-        if (mounted) {
-          setState(() {
-            _advertising = advertising;
-            if (event.error != null) _status = 'Adv error: ${event.error}';
-          });
+      // Start/stop set _advertising themselves. Only a failure to start,
+      // which Android reports asynchronously, needs handling here.
+      _advSub = UniversalBlePeripheral.advertisingStateStream.listen((event) {
+        if (!mounted || event.state != PeripheralAdvertisingState.error) {
+          return;
+        }
+        final message = 'Advertising failed: ${event.error ?? 'unknown error'}';
+        if (_advertising) {
+          unawaited(_stopBroadcast(message));
+        } else {
+          setState(() => _status = message);
+        }
+      });
+
+      // Don't keep the timer and keep-awake running without Bluetooth.
+      _availabilitySub = UniversalBle.availabilityStream.listen((state) {
+        if (mounted && _advertising && state == AvailabilityState.poweredOff) {
+          unawaited(
+            _stopBroadcast(
+              'Bluetooth was turned off, so broadcasting stopped.',
+            ),
+          );
         }
       });
 
@@ -114,37 +172,120 @@ class _EmulatorPageState extends State<EmulatorPage> {
         _supported = true;
         _status = 'Ready. Tap Start to advertise.';
       });
+      // Settings may have changed while the services were being registered.
+      if (_peripheral.sensors != _sensors) await _applySensors(_sensors);
     } catch (e) {
       if (mounted) setState(() => _status = 'Init failed: $e');
     }
   }
 
   Future<void> _toggleAdvertising() async {
+    if (_advertising) {
+      await _stopBroadcast('Stopped.');
+      return;
+    }
     try {
-      if (_advertising) {
-        _notifyTimer?.cancel();
-        await _peripheral.stopAdvertising();
-        await WakelockPlus.disable();
-        setState(() {
-          _advertising = false;
-          _subscribers = 0;
-          _status = 'Stopped.';
-        });
-      } else {
-        _peripheral.crank.reset();
-        await _peripheral.startAdvertising();
-        // Keep the screen on while advertising. A backgrounded / screen-off
-        // Flutter app is suspended by Android, which freezes the notify timer
-        // and the BLE peripheral — the central then drops the link.
-        await WakelockPlus.enable();
-        _notifyTimer = Timer.periodic(kNotifyInterval, _onTick);
-        setState(() {
-          _advertising = true;
-          _status = 'Advertising as "${_peripheral.deviceName}".';
-        });
-      }
+      _peripheral.resetSimulators();
+      await _peripheral.startAdvertising();
     } catch (e) {
-      setState(() => _status = 'Error: $e');
+      if (mounted) setState(() => _status = 'Error: $e');
+      return;
+    }
+    if (!mounted) return;
+    _notifyTimer?.cancel();
+    _notifyTimer = Timer.periodic(kNotifyInterval, _onTick);
+    setState(() {
+      _advertising = true;
+      _status = _advertisingStatus();
+    });
+    // A backgrounded / screen-off app is frozen by Android, which stops the
+    // notify timer, and the central then drops the link. Keep it running.
+    final mode = await _syncKeepAwake();
+    if (mode == null || !mounted || !_advertising) return;
+    final note = await _keepAwakeNote(mode);
+    if (mounted && _advertising) {
+      setState(() => _status = '${_advertisingStatus()} $note'.trim());
+    }
+  }
+
+  /// Stops the notify timer and advertising, and releases the keep-awake.
+  Future<void> _stopBroadcast(String status) async {
+    _notifyTimer?.cancel();
+    _notifyTimer = null;
+    if (mounted) {
+      setState(() {
+        _advertising = false;
+        _subscribers = 0;
+        _status = status;
+      });
+    }
+    try {
+      await _peripheral.stopAdvertising();
+    } catch (e) {
+      if (mounted) setState(() => _status = 'Error while stopping: $e');
+    }
+    await _syncKeepAwake();
+  }
+
+  String _advertisingStatus() {
+    final name = _peripheral.advertisedName;
+    return name == _peripheral.deviceName
+        ? 'Advertising as "$name".'
+        : 'Advertising as "$name" (name shortened to fit the Bluetooth '
+              'advertisement).';
+  }
+
+  /// Brings the keep-awake in line with [_advertising] and
+  /// [_screenOffEnabled]. Returns the mode held, or null after an error.
+  Future<KeepAwakeMode?> _syncKeepAwake() async {
+    try {
+      return await _keepAwake.update(
+        advertising: _advertising,
+        screenOff: _screenOffEnabled,
+        title: 'Broadcasting as “${_peripheral.advertisedName}”',
+        text: 'The screen can turn off. Tap to open the app.',
+      );
+    } catch (e) {
+      if (mounted) setState(() => _status = 'Keep-awake error: $e');
+      return null;
+    }
+  }
+
+  /// What the status line says about the keep-awake [mode].
+  Future<String> _keepAwakeNote(KeepAwakeMode mode) async {
+    if (mode == KeepAwakeMode.screenOff) {
+      return await _screenOffService.notificationsAllowed()
+          ? 'The screen can turn off.'
+          : 'The screen can turn off. Notifications are off, so the '
+                'broadcast notification is hidden.';
+    }
+    final error = _keepAwake.lastError;
+    return error == null
+        ? ''
+        : 'Screen-off mode didn’t start ($error), so the screen stays on.';
+  }
+
+  Future<void> _loadScreenOff() async {
+    final enabled = await _screenOffStore.load();
+    if (mounted) setState(() => _screenOffEnabled = enabled);
+  }
+
+  /// Applies the screen-off setting from Settings, right away if advertising.
+  Future<void> _setScreenOff(bool enabled) async {
+    setState(() => _screenOffEnabled = enabled);
+    unawaited(_screenOffStore.save(enabled));
+    // The ongoing notification needs permission on Android 13+.
+    if (enabled) await _screenOffService.requestNotifications();
+    if (!mounted || !_advertising) return;
+    final mode = await _syncKeepAwake();
+    if (mode == null || !mounted || !_advertising) return;
+    final note = await _keepAwakeNote(mode);
+    if (mounted && _advertising) {
+      setState(() {
+        _status = note.isNotEmpty
+            ? note
+            : 'The screen stays on while broadcasting.';
+      });
     }
   }
 
@@ -169,15 +310,20 @@ class _EmulatorPageState extends State<EmulatorPage> {
       power = _power.round();
       cadence = _cadence;
     }
+    // Heart rate and speed always come from their manual values, also while a
+    // profile (which only scripts power and cadence) is running.
     _peripheral.pushMeasurement(
       powerWatts: power,
       cadenceRpm: cadence,
       dtSeconds: dt,
+      heartRateBpm: _sensors.heartRateBpm,
+      speedKmh: _sensors.speedKmh.toDouble(),
     );
   }
 
   void _startProfile() {
     setState(() {
+      _profile = _selectedProfile;
       _profileElapsed = 0;
       _profileRunning = true;
       _status = 'Running "${_profile.name}"…';
@@ -202,6 +348,41 @@ class _EmulatorPageState extends State<EmulatorPage> {
     if (mounted) setState(() => _identity = identity);
   }
 
+  Future<void> _loadProfiles() async {
+    final library = await _profileStore.load();
+    if (!mounted) return;
+    setState(() {
+      _customProfiles = library.custom;
+      _selectedProfileId = library.selectedId;
+    });
+  }
+
+  void _selectProfile(String id) {
+    // Unknown ids (e.g. a just-deleted profile) fall back to the first built-in.
+    final resolved = resolveProfile(id, _customProfiles).id;
+    setState(() => _selectedProfileId = resolved);
+    _profileStore.saveSelectedId(resolved);
+  }
+
+  void _setCustomProfiles(List<PowerProfile> profiles) {
+    setState(() => _customProfiles = List.unmodifiable(profiles));
+    _profileStore.saveCustomProfiles(profiles);
+    if (findProfile(_selectedProfileId, profiles) == null) {
+      _selectProfile(kBuiltInProfiles.first.id);
+    }
+  }
+
+  Future<void> _openProfilePicker() async {
+    if (_profileRunning) return; // the library is locked while a profile runs
+    await showProfilePicker(
+      context: context,
+      customProfiles: _customProfiles,
+      selectedId: _selectedProfileId,
+      onSelected: _selectProfile,
+      onCustomProfilesChanged: _setCustomProfiles,
+    );
+  }
+
   void _applyPreset(Preset preset) {
     setState(() {
       _power = preset.power.toDouble();
@@ -209,10 +390,43 @@ class _EmulatorPageState extends State<EmulatorPage> {
     });
   }
 
+  /// Applies a new sensor selection / wheel size from Settings: persists it and
+  /// re-registers the GATT services if the set of services changed.
+  Future<void> _applySensors(SensorConfig config) async {
+    final next = config.normalized();
+    _sensorSaveTimer?.cancel();
+    setState(() => _sensors = next);
+    unawaited(_sensorStore.save(next));
+    if (!_supported) return; // _init() sets the services up once BLE is ready
+    try {
+      await _peripheral.setup(next);
+    } catch (e) {
+      if (mounted) setState(() => _status = 'Sensor setup failed: $e');
+    }
+  }
+
+  /// Updates the manual heart rate / speed (applied on the next tick) and
+  /// saves it shortly after the stepper stops moving.
+  void _setManualSensors(SensorConfig next) {
+    setState(() => _sensors = next.normalized());
+    _sensorSaveTimer?.cancel();
+    _sensorSaveTimer = Timer(
+      const Duration(milliseconds: 600),
+      () => _sensorStore.save(_sensors),
+    );
+  }
+
   Future<void> _openSettings() {
     return Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => SettingsPage(
+          sensors: _sensors,
+          advertising: _advertising,
+          onSensorsChanged: _applySensors,
+          screenOff: _screenOffEnabled,
+          onScreenOffChanged: _screenOffService.isSupported
+              ? _setScreenOff
+              : null,
           identity: _identity,
           onIdentityChanged: (identity) {
             _peripheral.applyIdentity(identity);
@@ -234,19 +448,31 @@ class _EmulatorPageState extends State<EmulatorPage> {
     _notifyTimer?.cancel();
     _subSub?.cancel();
     _advSub?.cancel();
+    _availabilitySub?.cancel();
+    _screenOffService.onStopRequested = null;
+    if (_sensorSaveTimer?.isActive ?? false) {
+      _sensorSaveTimer!.cancel();
+      unawaited(_sensorStore.save(_sensors));
+    }
     if (_advertising) {
       unawaited(_peripheral.stopAdvertising().catchError((_) {}));
-      unawaited(WakelockPlus.disable().catchError((_) {}));
     }
+    unawaited(
+      _keepAwake
+          .update(advertising: false, screenOff: _screenOffEnabled)
+          .catchError((_) => KeepAwakeMode.none),
+    );
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final shownProfile = _profileRunning ? _profile : _selectedProfile;
     final sample = _profileRunning ? _profile.sampleAt(_profileElapsed) : null;
     final shownPower = sample?.power ?? _power.round();
     final shownCadence = sample?.cadence ?? _cadence.round();
+    final s = _sensors;
     return Scaffold(
       appBar: AppBar(
         title: const Text('GOTTA.BIKE: BLE Watts'),
@@ -264,8 +490,10 @@ class _EmulatorPageState extends State<EmulatorPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _ReadoutCard(
-              power: shownPower,
-              cadence: shownCadence,
+              power: s.cyclingPower ? shownPower : null,
+              cadence: (s.cyclingPower || s.speedCadence) ? shownCadence : null,
+              heartRate: s.heartRate ? s.heartRateBpm : null,
+              speed: s.speedCadence ? s.speedKmh : null,
               subscribers: _subscribers,
               advertising: _advertising,
             ),
@@ -290,7 +518,7 @@ class _EmulatorPageState extends State<EmulatorPage> {
             ),
             const SizedBox(height: 20),
             if (_mode == _Mode.manual) ...[
-              if (_presets.isNotEmpty) ...[
+              if (s.cyclingPower && _presets.isNotEmpty) ...[
                 _PresetBar(
                   presets: _presets,
                   currentPower: _power.round(),
@@ -299,34 +527,92 @@ class _EmulatorPageState extends State<EmulatorPage> {
                 ),
                 const SizedBox(height: 20),
               ],
-              _AdjustControl(
-                label: 'Power',
-                unit: 'W',
-                value: _power,
-                min: 0,
-                max: 800,
-                step: 5,
-                onChanged: (v) => setState(() => _power = v),
-              ),
-              const SizedBox(height: 10),
-              _AdjustControl(
-                label: 'Cadence',
-                unit: 'rpm',
-                value: _cadence,
-                min: 0,
-                max: 150,
-                step: 1,
-                onChanged: (v) => setState(() => _cadence = v),
-              ),
-            ] else
+              // Keys keep each stepper's press-and-hold state with its own
+              // value when sensors are switched on or off.
+              if (s.cyclingPower) ...[
+                _AdjustControl(
+                  key: const ValueKey('adjust-power'),
+                  label: 'Power',
+                  unit: 'W',
+                  value: _power,
+                  min: 0,
+                  max: kPowerMax.toDouble(),
+                  step: 5,
+                  onChanged: (v) => setState(() => _power = v),
+                ),
+                const SizedBox(height: 10),
+              ],
+              if (s.cyclingPower || s.speedCadence) ...[
+                _AdjustControl(
+                  key: const ValueKey('adjust-cadence'),
+                  label: 'Cadence',
+                  unit: 'rpm',
+                  value: _cadence,
+                  min: 0,
+                  max: kCadenceMax.toDouble(),
+                  step: 1,
+                  onChanged: (v) => setState(() => _cadence = v),
+                ),
+                const SizedBox(height: 10),
+              ],
+              if (s.speedCadence) ...[
+                _AdjustControl(
+                  key: const ValueKey('adjust-speed'),
+                  label: 'Speed',
+                  unit: 'km/h',
+                  value: s.speedKmh.toDouble(),
+                  min: 0,
+                  max: kSpeedMaxKmh.toDouble(),
+                  step: 1,
+                  onChanged: (v) =>
+                      _setManualSensors(s.copyWith(speedKmh: v.round())),
+                ),
+                const SizedBox(height: 10),
+              ],
+              if (s.heartRate)
+                _AdjustControl(
+                  key: const ValueKey('adjust-heart-rate'),
+                  label: 'Heart rate',
+                  unit: 'bpm',
+                  value: s.heartRateBpm.toDouble(),
+                  min: kHeartRateMin.toDouble(),
+                  max: kHeartRateMax.toDouble(),
+                  step: 1,
+                  onChanged: (v) =>
+                      _setManualSensors(s.copyWith(heartRateBpm: v.round())),
+                ),
+            ] else ...[
+              if (!s.cyclingPower)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    'Cycling Power is off (Settings › Sensors), so the '
+                    'profile’s power is not broadcast; its cadence still '
+                    'drives Speed & Cadence.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.error,
+                    ),
+                  ),
+                ),
+              if (s.heartRate || s.speedCadence)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    'Profiles script power and cadence. Heart rate and speed '
+                    'keep their manual values.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
               ProfilePlayerView(
-                profile: _profile,
+                profile: shownProfile,
                 running: _profileRunning,
                 elapsedSec: _profileElapsed,
                 canRun: _advertising,
                 onRun: _startProfile,
                 onStop: _stopProfile,
+                onChangeProfile: _openProfilePicker,
               ),
+            ],
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed: _supported ? _toggleAdvertising : null,
@@ -346,33 +632,45 @@ class _EmulatorPageState extends State<EmulatorPage> {
   }
 }
 
+/// The live values being broadcast. A null metric belongs to a disabled
+/// sensor and is not shown.
 class _ReadoutCard extends StatelessWidget {
   const _ReadoutCard({
     required this.power,
     required this.cadence,
+    required this.heartRate,
+    required this.speed,
     required this.subscribers,
     required this.advertising,
   });
 
-  final int power;
-  final int cadence;
+  final int? power;
+  final int? cadence;
+  final int? heartRate;
+  final int? speed;
   final int subscribers;
   final bool advertising;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final metrics = [
+      if (power != null) _Metric(value: '$power', unit: 'watts'),
+      if (cadence != null) _Metric(value: '$cadence', unit: 'rpm'),
+      if (speed != null) _Metric(value: '$speed', unit: 'km/h'),
+      if (heartRate != null) _Metric(value: '$heartRate', unit: 'bpm'),
+    ];
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _Metric(value: '$power', unit: 'watts'),
-                _Metric(value: '$cadence', unit: 'rpm'),
-              ],
+            // Wraps onto a second line when four metrics don't fit.
+            Wrap(
+              alignment: WrapAlignment.spaceEvenly,
+              spacing: 24,
+              runSpacing: 12,
+              children: metrics,
             ),
             const SizedBox(height: 12),
             Row(
@@ -425,6 +723,7 @@ class _Metric extends StatelessWidget {
 /// press-and-hold to auto-repeat with acceleration.
 class _AdjustControl extends StatefulWidget {
   const _AdjustControl({
+    super.key,
     required this.label,
     required this.unit,
     required this.value,

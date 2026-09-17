@@ -11,13 +11,48 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// The advertised local name shares the 31-byte advertisement with the service
-/// UUID and flags, so keep it short or the OS truncates / drops it.
+/// Longest name the user may enter. The advertised local name shares the
+/// 31-byte advertisement with the flags and service UUIDs, so at advertising
+/// time it is further shortened with [fitAdvertisedName].
 const int kMaxDeviceNameLength = 20;
 
 /// Manufacturer / model are read over GATT (not the advert), so they can be
 /// longer, but stay reasonable.
 const int kMaxIdentityFieldLength = 40;
+
+/// Size of a legacy BLE advertisement.
+const int kLegacyAdvertisingBytes = 31;
+
+/// UTF-8 bytes left for the advertised local name when [serviceCount] 16-bit
+/// service UUIDs share a legacy advertisement with it.
+///
+/// `universal_ble` 2.1.1 on Android puts the flags (3 bytes, added for a
+/// connectable advertisement), the "Complete List of 16-bit Service UUIDs"
+/// (2 + 2 per service) and the complete local name (2 + its UTF-8 bytes) into
+/// the primary advertisement. Android rejects more than 31 bytes with
+/// ADVERTISE_FAILED_DATA_TOO_LARGE, so 1 service leaves 22 name bytes, 2 leave
+/// 20 and 3 leave 18.
+int advertisedNameBudget(int serviceCount) {
+  final n = serviceCount < 1 ? 1 : serviceCount;
+  return kLegacyAdvertisingBytes - 3 - (2 + 2 * n) - 2;
+}
+
+/// [name] cut at a character boundary (trailing spaces dropped) so its UTF-8
+/// encoding fits [advertisedNameBudget] for [serviceCount] services.
+String fitAdvertisedName(String name, int serviceCount) {
+  final budget = advertisedNameBudget(serviceCount);
+  if (utf8.encode(name).length <= budget) return name;
+  final out = StringBuffer();
+  var used = 0;
+  for (final rune in name.runes) {
+    final ch = String.fromCharCode(rune);
+    final bytes = utf8.encode(ch).length;
+    if (used + bytes > budget) break;
+    out.write(ch);
+    used += bytes;
+  }
+  return out.toString().trimRight();
+}
 
 String _clampField(String s, int max) {
   final t = s.trim();
