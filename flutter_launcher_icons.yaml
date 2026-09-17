@@ -1,0 +1,42 @@
+# flutter_launcher_icons (0.14.4) config for the Android + iOS launcher icons.
+#
+# Don't run `dart run flutter_launcher_icons` on its own: 0.14.4 also rewrites
+# ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS in
+# ios/Runner.xcodeproj/project.pbxproj to "AppIcon"
+# (https://github.com/fluttercommunity/flutter_launcher_icons/issues/634).
+# Use the wrapper instead, which runs the tool and then restores those lines:
+#
+#   python3 assets/icon/generate_icon.py                  # redraw art + icons
+#   python3 assets/icon/generate_icon.py --launcher-only  # after swapping PNGs
+#
+# The source art in assets/icon/ is a PLACEHOLDER mark (see generate_icon.py).
+# Key reference: the "Attributes" section of the package README.
+flutter_launcher_icons:
+  # 1024x1024, fully opaque. Used for iOS and for the legacy (pre-API 26)
+  # Android mipmap-*/ic_launcher.png icons.
+  image_path: "assets/icon/icon.png"
+
+  # true = overwrite the default @mipmap/ic_launcher, which
+  # AndroidManifest.xml already references (so the manifest is unchanged).
+  android: true
+  # Informational only: 0.14.4 parses this key but never reads it. The real
+  # minSdk comes from flutter.minSdkVersion in android/app/build.gradle.kts.
+  min_sdk_android: 21
+  # Adaptive icon (API 26+): a solid background colour plus a transparent
+  # foreground. The foreground PNG is the whole 108 dp layer with the mark
+  # already inside the 66 dp safe zone, so no extra inset is added (the
+  # default 16% would shrink the mark to ~38 dp, below Android's 48 dp minimum).
+  adaptive_icon_background: "#0E1116"
+  adaptive_icon_foreground: "assets/icon/icon_foreground.png"
+  adaptive_icon_foreground_inset: 0
+  # Android 13+ themed icon: a single-colour transparent layer that the
+  # launcher tints. The same inset applies to it.
+  adaptive_icon_monochrome: "assets/icon/icon_monochrome.png"
+
+  ios: true
+  # App Store Connect rejects an app icon with an alpha channel (ITMS-90717).
+  # icon.png is saved without one, so this is only a safety net. Keep
+  # replacement art alpha-free too: 0.14.4's alpha removal mixes up colour
+  # channels on semi-transparent pixels (_alphaBlend in lib/ios.dart).
+  remove_alpha_ios: true
+  background_color_ios: "#0E1116"
