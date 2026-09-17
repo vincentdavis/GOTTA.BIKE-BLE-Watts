@@ -64,10 +64,48 @@ void main() {
     expect(find.textContaining('Bluetooth address'), findsOneWidget);
     expect(find.text('Endurance'), findsOneWidget); // presets still there
     expect(find.text('Sensors'), findsNothing); // no sensor callback given
+    expect(find.text('Screen off'), findsNothing); // not supported here
 
     // Editing the name field emits an updated identity to the caller.
     await tester.enterText(find.byType(TextField).first, 'My Rig');
     expect(changed?.name, 'My Rig');
+  });
+
+  testWidgets('screen-off switch toggles, also while advertising', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final changes = <bool>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(useMaterial3: true),
+        home: SettingsPage(
+          identity: DeviceIdentity.defaults,
+          onIdentityChanged: (_) {},
+          presets: PresetStore.defaults,
+          onChanged: (_) {},
+          sensors: const SensorConfig(heartRate: true, speedCadence: true),
+          advertising: true,
+          onSensorsChanged: (_) {},
+          onScreenOffChanged: changes.add,
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+
+    final toggle = find.byKey(const ValueKey('screen-off'));
+    await tester.ensureVisible(toggle);
+    await tester.pumpAndSettle();
+    expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
+    await tester.tap(toggle);
+    await tester.pump();
+    expect(changes, [true]);
+    expect(tester.widget<SwitchListTile>(toggle).value, isTrue);
+    await tester.tap(toggle);
+    await tester.pump();
+    expect(changes, [true, false]);
   });
 
   group('Sensors section', () {

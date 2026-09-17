@@ -11,6 +11,7 @@ import 'presets.dart';
 import 'profile_picker.dart';
 import 'profile_player.dart';
 import 'profile_store.dart';
+import 'screen_off_mode.dart';
 import 'sensor_config.dart';
 import 'settings_page.dart';
 
@@ -51,6 +52,18 @@ class _EmulatorPageState extends State<EmulatorPage> {
   final DeviceIdentityStore _identityStore = DeviceIdentityStore();
   final ProfileStore _profileStore = ProfileStore();
   final SensorConfigStore _sensorStore = SensorConfigStore();
+  final ScreenOffStore _screenOffStore = ScreenOffStore();
+  final ScreenOffService _screenOffService = ScreenOffService();
+
+  /// Keeps the app running while advertising: the screen-off service when
+  /// [_screenOffEnabled], otherwise a screen wakelock.
+  late final KeepAwake _keepAwake = KeepAwake(
+    service: _screenOffService,
+    screenWakelock: (on) => on ? WakelockPlus.enable() : WakelockPlus.disable(),
+  );
+
+  /// "Keep broadcasting with screen off" (Settings; Android only).
+  bool _screenOffEnabled = false;
 
   /// The profile being played. Snapshotted from the library selection when a
   /// run starts (the picker is locked while a profile runs).
@@ -86,14 +99,21 @@ class _EmulatorPageState extends State<EmulatorPage> {
   Timer? _notifyTimer;
   StreamSubscription? _subSub;
   StreamSubscription? _advSub;
+  StreamSubscription? _availabilitySub;
 
   @override
   void initState() {
     super.initState();
+    _screenOffService.onStopRequested = () {
+      if (_advertising) {
+        unawaited(_stopBroadcast('Stopped from the notification.'));
+      }
+    };
     _init();
     _loadPresets();
     _loadIdentity();
     _loadProfiles();
+    _loadScreenOff();
   }
 
   Future<void> _init() async {
@@ -123,15 +143,28 @@ class _EmulatorPageState extends State<EmulatorPage> {
         if (mounted) setState(() => _subscribers = count);
       });
 
-      _advSub = UniversalBlePeripheral.advertisingStateStream.listen((
-        event,
-      ) async {
-        final advertising = await _peripheral.isAdvertising();
-        if (mounted) {
-          setState(() {
-            _advertising = advertising;
-            if (event.error != null) _status = 'Adv error: ${event.error}';
-          });
+      // Start/stop set _advertising themselves. Only a failure to start,
+      // which Android reports asynchronously, needs handling here.
+      _advSub = UniversalBlePeripheral.advertisingStateStream.listen((event) {
+        if (!mounted || event.state != PeripheralAdvertisingState.error) {
+          return;
+        }
+        final message = 'Advertising failed: ${event.error ?? 'unknown error'}';
+        if (_advertising) {
+          unawaited(_stopBroadcast(message));
+        } else {
+          setState(() => _status = message);
+        }
+      });
+
+      // Don't keep the timer and keep-awake running without Bluetooth.
+      _availabilitySub = UniversalBle.availabilityStream.listen((state) {
+        if (mounted && _advertising && state == AvailabilityState.poweredOff) {
+          unawaited(
+            _stopBroadcast(
+              'Bluetooth was turned off, so broadcasting stopped.',
+            ),
+          );
         }
       });
 
@@ -147,35 +180,112 @@ class _EmulatorPageState extends State<EmulatorPage> {
   }
 
   Future<void> _toggleAdvertising() async {
+    if (_advertising) {
+      await _stopBroadcast('Stopped.');
+      return;
+    }
     try {
-      if (_advertising) {
-        _notifyTimer?.cancel();
-        await _peripheral.stopAdvertising();
-        await WakelockPlus.disable();
-        setState(() {
-          _advertising = false;
-          _subscribers = 0;
-          _status = 'Stopped.';
-        });
-      } else {
-        _peripheral.resetSimulators();
-        await _peripheral.startAdvertising();
-        // Keep the screen on while advertising. A backgrounded / screen-off
-        // Flutter app is suspended by Android, which freezes the notify timer
-        // and the BLE peripheral — the central then drops the link.
-        await WakelockPlus.enable();
-        _notifyTimer = Timer.periodic(kNotifyInterval, _onTick);
-        final name = _peripheral.advertisedName;
-        setState(() {
-          _advertising = true;
-          _status = name == _peripheral.deviceName
-              ? 'Advertising as "$name".'
-              : 'Advertising as "$name" (name shortened to fit the Bluetooth '
-                    'advertisement).';
-        });
-      }
+      _peripheral.resetSimulators();
+      await _peripheral.startAdvertising();
     } catch (e) {
-      setState(() => _status = 'Error: $e');
+      if (mounted) setState(() => _status = 'Error: $e');
+      return;
+    }
+    if (!mounted) return;
+    _notifyTimer?.cancel();
+    _notifyTimer = Timer.periodic(kNotifyInterval, _onTick);
+    setState(() {
+      _advertising = true;
+      _status = _advertisingStatus();
+    });
+    // A backgrounded / screen-off app is frozen by Android, which stops the
+    // notify timer, and the central then drops the link. Keep it running.
+    final mode = await _syncKeepAwake();
+    if (mode == null || !mounted || !_advertising) return;
+    final note = await _keepAwakeNote(mode);
+    if (mounted && _advertising) {
+      setState(() => _status = '${_advertisingStatus()} $note'.trim());
+    }
+  }
+
+  /// Stops the notify timer and advertising, and releases the keep-awake.
+  Future<void> _stopBroadcast(String status) async {
+    _notifyTimer?.cancel();
+    _notifyTimer = null;
+    if (mounted) {
+      setState(() {
+        _advertising = false;
+        _subscribers = 0;
+        _status = status;
+      });
+    }
+    try {
+      await _peripheral.stopAdvertising();
+    } catch (e) {
+      if (mounted) setState(() => _status = 'Error while stopping: $e');
+    }
+    await _syncKeepAwake();
+  }
+
+  String _advertisingStatus() {
+    final name = _peripheral.advertisedName;
+    return name == _peripheral.deviceName
+        ? 'Advertising as "$name".'
+        : 'Advertising as "$name" (name shortened to fit the Bluetooth '
+              'advertisement).';
+  }
+
+  /// Brings the keep-awake in line with [_advertising] and
+  /// [_screenOffEnabled]. Returns the mode held, or null after an error.
+  Future<KeepAwakeMode?> _syncKeepAwake() async {
+    try {
+      return await _keepAwake.update(
+        advertising: _advertising,
+        screenOff: _screenOffEnabled,
+        title: 'Broadcasting as “${_peripheral.advertisedName}”',
+        text: 'The screen can turn off. Tap to open the app.',
+      );
+    } catch (e) {
+      if (mounted) setState(() => _status = 'Keep-awake error: $e');
+      return null;
+    }
+  }
+
+  /// What the status line says about the keep-awake [mode].
+  Future<String> _keepAwakeNote(KeepAwakeMode mode) async {
+    if (mode == KeepAwakeMode.screenOff) {
+      return await _screenOffService.notificationsAllowed()
+          ? 'The screen can turn off.'
+          : 'The screen can turn off. Notifications are off, so the '
+                'broadcast notification is hidden.';
+    }
+    final error = _keepAwake.lastError;
+    return error == null
+        ? ''
+        : 'Screen-off mode didn’t start ($error), so the screen stays on.';
+  }
+
+  Future<void> _loadScreenOff() async {
+    final enabled = await _screenOffStore.load();
+    if (mounted) setState(() => _screenOffEnabled = enabled);
+  }
+
+  /// Applies the screen-off setting from Settings, right away if advertising.
+  Future<void> _setScreenOff(bool enabled) async {
+    setState(() => _screenOffEnabled = enabled);
+    unawaited(_screenOffStore.save(enabled));
+    // The ongoing notification needs permission on Android 13+.
+    if (enabled) await _screenOffService.requestNotifications();
+    if (!mounted || !_advertising) return;
+    final mode = await _syncKeepAwake();
+    if (mode == null || !mounted || !_advertising) return;
+    final note = await _keepAwakeNote(mode);
+    if (mounted && _advertising) {
+      setState(() {
+        _status = note.isNotEmpty
+            ? note
+            : 'The screen stays on while broadcasting.';
+      });
     }
   }
 
@@ -313,6 +423,10 @@ class _EmulatorPageState extends State<EmulatorPage> {
           sensors: _sensors,
           advertising: _advertising,
           onSensorsChanged: _applySensors,
+          screenOff: _screenOffEnabled,
+          onScreenOffChanged: _screenOffService.isSupported
+              ? _setScreenOff
+              : null,
           identity: _identity,
           onIdentityChanged: (identity) {
             _peripheral.applyIdentity(identity);
@@ -334,14 +448,20 @@ class _EmulatorPageState extends State<EmulatorPage> {
     _notifyTimer?.cancel();
     _subSub?.cancel();
     _advSub?.cancel();
+    _availabilitySub?.cancel();
+    _screenOffService.onStopRequested = null;
     if (_sensorSaveTimer?.isActive ?? false) {
       _sensorSaveTimer!.cancel();
       unawaited(_sensorStore.save(_sensors));
     }
     if (_advertising) {
       unawaited(_peripheral.stopAdvertising().catchError((_) {}));
-      unawaited(WakelockPlus.disable().catchError((_) {}));
     }
+    unawaited(
+      _keepAwake
+          .update(advertising: false, screenOff: _screenOffEnabled)
+          .catchError((_) => KeepAwakeMode.none),
+    );
     super.dispose();
   }
 

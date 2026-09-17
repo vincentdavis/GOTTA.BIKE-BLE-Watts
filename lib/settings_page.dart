@@ -5,8 +5,8 @@ import 'device_identity.dart';
 import 'presets.dart';
 import 'sensor_config.dart';
 
-/// Settings screen: the emulated sensors, the BLE device identity and the
-/// quick-select presets.
+/// Settings screen: the emulated sensors, screen-off broadcasting, the BLE
+/// device identity and the quick-select presets.
 ///
 /// Edits local copies and calls the change callbacks after every mutation so
 /// the caller can update the main screen and persist immediately.
@@ -20,6 +20,8 @@ class SettingsPage extends StatefulWidget {
     this.sensors = SensorConfig.defaults,
     this.advertising = false,
     this.onSensorsChanged,
+    this.screenOff = false,
+    this.onScreenOffChanged,
   });
 
   final DeviceIdentity identity;
@@ -35,12 +37,19 @@ class SettingsPage extends StatefulWidget {
   final bool advertising;
   final ValueChanged<SensorConfig>? onSensorsChanged;
 
+  /// "Keep broadcasting with screen off"; the switch is shown only when
+  /// [onScreenOffChanged] is set (Android). It applies immediately, also
+  /// while advertising.
+  final bool screenOff;
+  final ValueChanged<bool>? onScreenOffChanged;
+
   @override
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
 class _SettingsPageState extends State<SettingsPage> {
   late final List<Preset> _items = List.of(widget.presets);
+  late bool _screenOff = widget.screenOff;
 
   void _commit() => widget.onChanged(List.of(_items));
 
@@ -95,6 +104,28 @@ class _SettingsPageState extends State<SettingsPage> {
               sensors: widget.sensors,
               advertising: widget.advertising,
               onChanged: widget.onSensorsChanged!,
+            ),
+            const SizedBox(height: 8),
+            const Divider(),
+            const SizedBox(height: 8),
+          ],
+          if (widget.onScreenOffChanged != null) ...[
+            Text('Screen off', style: theme.textTheme.titleMedium),
+            SwitchListTile(
+              key: const ValueKey('screen-off'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Keep broadcasting with screen off'),
+              subtitle: const Text(
+                'While broadcasting, keeps the phone awake and shows a '
+                'notification with a Stop button, so the screen can turn '
+                'off. Uses more battery. When this is off, the screen stays '
+                'on while broadcasting.',
+              ),
+              value: _screenOff,
+              onChanged: (value) {
+                setState(() => _screenOff = value);
+                widget.onScreenOffChanged!(value);
+              },
             ),
             const SizedBox(height: 8),
             const Divider(),

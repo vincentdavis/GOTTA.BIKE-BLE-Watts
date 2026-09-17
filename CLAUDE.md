@@ -12,7 +12,10 @@ sensor (Settings › Sensors; at least one service is always on). It is a
 - Flutter (Dart >=3.1.3, Flutter >=3.3.0)
 - BLE: `universal_ble` ^2.0.4 — peripheral / GATT-server + advertising
 - `wakelock_plus` (keep screen on while advertising); `shared_preferences`
-  (persist presets, device identity, profiles and the sensor selection)
+  (persist presets, device identity, profiles, the sensor selection and the
+  screen-off setting)
+- Android only: a small native foreground service (Kotlin, no plugin) for
+  the optional "keep broadcasting with screen off" mode.
 - Material 3, dark theme. No state-management package; plain `StatefulWidget`.
 
 ## Layout
@@ -51,8 +54,19 @@ sensor (Settings › Sensors; at least one service is always on). It is a
   pure/testable like `cpm_codec.dart`.
 - `lib/settings_page.dart` — Settings screen: sensor switches (locked while
   advertising; the last one on can't be turned off) and wheel circumference,
-  the device identity (name, manufacturer, model), and add/edit/delete the
-  presets.
+  the screen-off switch (Android only; applies immediately), the device
+  identity (name, manufacturer, model), and add/edit/delete the presets.
+- `lib/screen_off_mode.dart` — "keep broadcasting with screen off":
+  `ScreenOffService` (method channel `gotta.bike/keep_alive`),
+  `KeepAwake` (serialised; holds either the screen wakelock or the service
+  while advertising, falling back to the screen wakelock if the service
+  can't start) and `ScreenOffStore`.
+- `android/app/src/main/kotlin/com/example/cps_emulator/` —
+  `BroadcastKeepAliveService.kt` (`connectedDevice` foreground service +
+  partial wake lock + ongoing notification with a Stop action; runs no
+  Dart) and `MainActivity.kt` (the channel, the Android 13+ notification
+  permission request, and stopping the service when the activity finishes).
+  The notification icon is `res/drawable/ic_stat_broadcast.xml`.
 - `lib/device_identity.dart` — pure `DeviceIdentity` (advertised name +
   Manufacturer/Model for the DIS) + `DeviceIdentityStore` (`shared_preferences`),
   plus the advertisement name budget (`advertisedNameBudget`,
@@ -115,8 +129,11 @@ sensor (Settings › Sensors; at least one service is always on). It is a
 - Tests: `flutter test`
 
 ## Testing constraints
-- BLE peripheral mode does NOT work in the iOS Simulator or Android emulator.
-  All BLE testing requires a physical device. Fastest correctness check: run
+- BLE peripheral mode does NOT work in the iOS Simulator. A recent Android
+  emulator (API 36 image, 2026-09) reports peripheral support and starts
+  advertising on its virtual Bluetooth, which is enough to exercise the UI
+  and the screen-off service, but testing with real centrals (Zwift, head
+  units) needs a physical phone. Fastest correctness check: run
   `nRF Connect` on a second phone/PC, scan for "GOTTA.BIKE Watts", read
   `0x2A65`/`0x2A5D`, subscribe to `0x2A63`, watch the 8-byte packets (and
   `0x2A37` / `0x2A5B` when those sensors are on).
@@ -130,10 +147,20 @@ sensor (Settings › Sensors; at least one service is always on). It is a
   `UniversalBlePeripheral.getCapabilities().supportsPeripheralMode` at runtime.
 - A backgrounded / screen-off Flutter app is suspended by Android: the 500 ms
   notify timer and the BLE peripheral freeze, so the central (e.g. Zwift) drops
-  the link after its supervision timeout. The app holds a wakelock
-  (`wakelock_plus`, enabled in `_toggleAdvertising` while advertising) to keep
-  the screen on and the process foregrounded. True screen-off operation would
-  require an Android foreground service (not implemented).
+  the link after its supervision timeout. By default the app keeps the screen
+  on while advertising (`wakelock_plus`, via `KeepAwake`). With Settings ›
+  "Keep broadcasting with screen off" on, `BroadcastKeepAliveService` holds a
+  partial wake lock instead; on the emulator the process then kept running
+  (not frozen) with the screen off and after Home. Swiping the app away or
+  finishing the activity stops the service (the broadcast lives in the
+  activity's engine). Still to verify on a physical phone with Zwift.
+- Do not replace the native service with `flutter_foreground_task` or any
+  plugin that starts a second FlutterEngine: every plugin attaches to that
+  engine too, and when it is destroyed `universal_ble` clears its
+  process-wide GATT characteristic/subscriber caches, which silently breaks
+  notifications for the main engine.
+- Play Console: the `connectedDevice` foreground service needs the
+  foreground-service declaration (App content) before release.
 - iOS deployment target must be >= 13.1 (`universal_ble` is resolved via Swift
   Package Manager and requires it). This project pins 14.0 in
   `ios/Runner.xcodeproj/project.pbxproj`. Re-running `flutter create` resets it

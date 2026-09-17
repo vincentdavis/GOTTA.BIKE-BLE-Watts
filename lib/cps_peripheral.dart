@@ -249,12 +249,6 @@ class CyclingPowerPeripheral {
   String get advertisedName =>
       fitAdvertisedName(deviceName, advertisedServices.length);
 
-  /// True while the OS reports we are actively advertising.
-  Future<bool> isAdvertising() async {
-    final state = await UniversalBlePeripheral.getAdvertisingState();
-    return state == PeripheralAdvertisingState.advertising;
-  }
-
   /// Starts advertising the enabled sensor services under [advertisedName].
   ///
   /// Note: on Android `universal_ble` puts the name into the advertisement by
