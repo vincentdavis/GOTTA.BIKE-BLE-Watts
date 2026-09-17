@@ -16,16 +16,19 @@ Companion documents in this folder:
 
 ## 1. Confirm what ships
 
-- [ ] All feature branches are merged into `main`, and `flutter analyze` and
-      `flutter test` pass on `main`.
+- [x] All feature branches are merged into `main`, and `flutter analyze` and
+      `flutter test` pass on `main` (merge `ebfedd3`, 2026-09-16). Re-run
+      both after any later change.
 - [ ] Go through **Features to confirm before submitting** in `listing.md`.
-      Delete the description lines for anything that did not ship, then
-      re-run the character-count script there.
-- [ ] Test the **release build on a physical phone** (BLE peripheral mode
-      doesn't work in emulators): pair with nRF Connect and a cycling app
-      (for example Zwift), check power and cadence, run a test profile, and
-      test every sensor and setting that ships (Heart Rate, Speed & Cadence,
-      screen-off broadcasting).
+      Everything listed there shipped; delete a description line only if
+      its feature fails the device test below, then re-run the
+      character-count script there.
+- [ ] Test the **release build on a physical phone** (an emulator can
+      exercise the UI, but not real centrals): pair with nRF Connect and a
+      cycling app (for example Zwift), check power and cadence, run a test
+      profile, and test Heart Rate, Speed & Cadence and screen-off
+      broadcasting (turn the screen off for a few minutes mid-session and
+      confirm the receiving app keeps getting data).
 
 ## 2. Developer account
 
@@ -44,6 +47,12 @@ those.
 ```bash
 keytool -genkey -v -keystore ~/gotta-bike-ble-watts-upload.jks -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 -alias upload
 ```
+
+On macOS, `/usr/bin/keytool` is only a stub: if it says "Unable to locate a
+Java Runtime", use the `keytool` from the JDK that Flutter uses (`flutter
+doctor -v` prints its path; on this machine it is
+`/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home/bin/keytool`).
+The same applies to the `keytool -printcert` check in step 5.
 
 ```bash
 cp android/key.properties.example android/key.properties
@@ -122,15 +131,15 @@ keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab
       shared).
 - [ ] **Health apps**: "My app doesn't provide any health features" (see
       `listing.md`, Category).
-- [ ] **Foreground service permissions**. Only if screen-off broadcasting
-      ships. The app uses the `connectedDevice` type
-      (`FOREGROUND_SERVICE_CONNECTED_DEVICE`), so Play Console asks for each
-      service type:
+- [ ] **Foreground service permissions**. Required: screen-off broadcasting
+      shipped. The app uses the `connectedDevice` type
+      (`FOREGROUND_SERVICE_CONNECTED_DEVICE`, `BroadcastKeepAliveService`),
+      so Play Console asks for each service type:
   - Use case: **Continuous Data Transfer to an External Device**.
   - Functionality description (ready to paste):
 
     ```text
-    Optional "Keep broadcasting with screen off" setting. When the user turns it on and starts broadcasting, the app runs a connectedDevice foreground service with a persistent notification. It keeps the Bluetooth LE advertising and the twice-per-second sensor notifications to the user's paired bike computer or cycling app running while the screen is off. It stops when the user stops broadcasting.
+    Optional "Keep broadcasting with screen off" setting. When the user turns it on and starts broadcasting, the app runs a connectedDevice foreground service with a persistent notification (with a Stop button). It keeps the Bluetooth LE advertising and the twice-per-second sensor notifications to the user's connected bike computer or cycling app running while the screen is off. It stops when the user stops broadcasting, taps Stop in the notification, or closes the app.
     ```
 
   - User impact if the task is deferred or interrupted (ready to paste):

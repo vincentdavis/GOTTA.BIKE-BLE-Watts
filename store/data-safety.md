@@ -1,10 +1,10 @@
 # Play Console Data safety form: GOTTA.BIKE: BLE Watts
 
 Answers for **Play Console > Policy > App content > Data safety**. They are
-based on the code at base commit `ef2d7d9`, the merged **release** manifest
-and `pubspec.lock`, plus the features planned for this release (Heart Rate
-and Speed & Cadence emulation, profile editor, optional foreground service).
-Re-check them against the final build before you submit
+based on the code on `main` at merge commit `ebfedd3` (which includes Heart
+Rate and Speed & Cadence emulation, the profile editor and the optional
+screen-off foreground service), its merged **release** manifest and
+`pubspec.lock`. Re-check them against the final build before you submit
 ([when to revisit](#when-to-revisit-these-answers)).
 
 ## Answers at a glance
@@ -42,14 +42,22 @@ Here is what the app does, checked in the code:
 1. **The app has no network access in release builds.** The merged release
    manifest has **no `android.permission.INTERNET`**. We checked
    `build/app/intermediates/packaged_manifests/release/processReleaseManifestForPackage/AndroidManifest.xml`,
-   produced by a release build of commit `ef2d7d9` (applicationId
-   `ble.make.bike.gotta`, targetSdk 36, minSdk 24) on 2026-09-16. Only the debug and profile manifests
+   produced by a release build of merge commit `ebfedd3` (applicationId
+   `ble.make.bike.gotta`, targetSdk 36, minSdk 24) on 2026-09-16. Its
+   permissions are the Bluetooth ones, `FOREGROUND_SERVICE`,
+   `FOREGROUND_SERVICE_CONNECTED_DEVICE`, `WAKE_LOCK`, `POST_NOTIFICATIONS`
+   (all for the optional screen-off mode, which runs no network code) and
+   AndroidX's internal `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`. Only the debug and profile manifests
    (`android/app/src/debug/` and `android/app/src/profile/AndroidManifest.xml`)
    add `INTERNET`, which Flutter tooling needs for hot reload and debugging.
    The release app cannot open a network connection, so nothing can reach us
    or a third party.
-2. **No SDK collects data.** The direct dependencies are `universal_ble`,
-   `wakelock_plus`, `shared_preferences` and `cupertino_icons`.
+2. **No SDK collects data.** The direct runtime dependencies are
+   `universal_ble`, `wakelock_plus`, `shared_preferences` and
+   `cupertino_icons` (`flutter_launcher_icons` is a dev-only build tool that
+   is not part of the app). The screen-off foreground service is the app's
+   own Kotlin code (`BroadcastKeepAliveService.kt`) with no third-party
+   library.
    `pubspec.lock` has no analytics, advertising, crash-reporting or
    attribution SDK. It does contain `http`, but only as a transitive
    dependency of `package_info_plus`, which `wakelock_plus` uses on Linux.
@@ -61,8 +69,10 @@ Here is what the app does, checked in the code:
    `com.google.android.gms.permission.AD_ID`.
 3. **Settings stay on the device.** Presets, BLE identity, profiles and
    sensor settings are written with `shared_preferences` to app-private
-   storage (`lib/presets.dart`, `lib/device_identity.dart`). That is
-   on-device processing, not collection.
+   storage (`lib/presets.dart`, `lib/device_identity.dart`,
+   `lib/profile_store.dart`, `lib/sensor_config.dart`,
+   `lib/screen_off_mode.dart`). That is on-device processing, not
+   collection.
 4. **The Bluetooth broadcast is neither collection nor sharing of user
    data.**
    - It happens only after the user taps **Start**
@@ -117,7 +127,7 @@ Every row is **not collected, not shared**.
 | Messages | Emails, SMS or MMS, In-app messages | None. |
 | Photos and videos | Photos, Videos | None. |
 | Audio files | Voice or sound recordings, Music files, Other | None. |
-| Files and docs | Files and docs | None. If the profile editor imports or exports profile files, they still stay on the device unless the user shares them through Android's share sheet, which is a user-initiated action. Re-check once the editor has landed. |
+| Files and docs | Files and docs | None. The profile editor saves profiles in app-private preferences and has no file import or export. Re-check if import/export is added. |
 | Calendar | Calendar events | None. |
 | Contacts | Contacts | None. |
 | App activity | App interactions, In-app search history, Installed apps, Other user-generated content, Other actions | No analytics. Presets and profiles stay on the device. |

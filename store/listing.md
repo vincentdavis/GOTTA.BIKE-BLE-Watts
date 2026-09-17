@@ -8,8 +8,8 @@ applicationId `ble.make.bike.gotta`). Paste the text blocks below into
   in the table were computed by a script (see
   [Re-checking the counts](#re-checking-the-counts)), not by hand.
 - Values in `[BRACKETS]` are placeholders the owner has to fill in.
-- Some features are being added in this same release by other work streams.
-  Before you submit, check them against
+- Every feature the description mentions is on `main` (merge `ebfedd3`).
+  Before you submit, run the device checks in
   [Features to confirm before submitting](#features-to-confirm-before-submitting).
 
 ## Summary
@@ -21,7 +21,7 @@ applicationId `ble.make.bike.gotta`). Paste the text blocks below into
 | Short description, alternate A | see below | 80 | 72 |
 | Short description, alternate B | see below | 80 | 75 |
 | Short description, alternate C | see below | 80 | 72 |
-| Full description | see below | 4000 | 3629 (3586 without its 43 line breaks) |
+| Full description | see below | 4000 | 3636 (3593 without its 43 line breaks) |
 | Category | **Tools** (recommended) | n/a | n/a |
 | Tags | up to 5 from Google's list | 5 | n/a |
 | Contact email | `[CONTACT EMAIL]` (required, shown publicly) | n/a | n/a |
@@ -52,7 +52,7 @@ characters
 
 ## Short description
 
-Recommended. It stays accurate whichever of the pending sensors ship:
+Recommended:
 
 <!-- BEGIN short-description -->
 ```text
@@ -68,7 +68,8 @@ Emulate a Bluetooth power meter to test bike computers and cycling apps.
 ```
 <!-- END short-description-alt-a -->
 
-Alternate B. Use it only if Heart Rate **and** Speed & Cadence ship:
+Alternate B. Names all four values (Heart Rate and Speed & Cadence both
+shipped):
 
 <!-- BEGIN short-description-alt-b -->
 ```text
@@ -116,7 +117,7 @@ Identity and control
 • Set the advertised device name, the manufacturer name and the model number
 • See a live count of connected subscribers, with one button to start and stop
 • By default the screen stays on while broadcasting, so Android doesn't pause the app
-• Optional: keep broadcasting with the screen off, with a persistent notification shown while it runs
+• Optional: keep broadcasting with the screen off, with a notification and a Stop button shown while it runs
 
 Privacy
 • No account, no ads, no analytics
@@ -142,15 +143,20 @@ GOTTA.BIKE: BLE Watts is an independent app. It is not affiliated with, endorsed
 | Claim | Source in the repo |
 |---|---|
 | CPS `0x1818`, power + crank revolution data, cadence derived by receivers | `lib/cps_peripheral.dart`, `lib/cpm_codec.dart` |
+| Heart Rate `0x180D` | `lib/hr_codec.dart`, `lib/cps_peripheral.dart`, Settings › Sensors |
+| Cycling Speed and Cadence `0x1816` | `lib/csc_codec.dart`, `lib/cps_peripheral.dart`, Settings › Sensors |
 | Device Information `0x180A` with Manufacturer (`0x2A29`) and Model (`0x2A24`) | `lib/cps_peripheral.dart` |
 | "twice per second" | `kNotifyInterval = 500 ms` in `lib/main.dart` |
 | Power 0 to 800 W in 5 W steps, cadence 0 to 150 rpm in 1 rpm steps, press and hold | `_AdjustControl` in `lib/main.dart` |
 | Up to 5 presets | `kMaxPresets = 5` in `lib/presets.dart` |
 | Chart, playhead, progress, active step | `lib/profile_player.dart` |
 | CdA · Crr · Mass profile: 10 minutes, ladder, acceleration, two coast-downs | `kCdaCrrMassProfile` (600 s) in `lib/power_profile.dart` |
+| Built-in or custom profiles, profile editor | `lib/profile_picker.dart`, `lib/profile_editor_page.dart` |
+| Surface Crr profile | `kSurfaceCrrProfile` in `lib/power_profile.dart` |
 | Editable name, manufacturer, model | `lib/device_identity.dart`, `lib/settings_page.dart` |
 | Live subscriber count, start/stop | `lib/main.dart` |
-| Screen stays on while broadcasting, so Android doesn't pause the app | `WakelockPlus.enable()` in `_toggleAdvertising` (`lib/main.dart`); `CLAUDE.md` testing constraints |
+| Screen stays on while broadcasting, so Android doesn't pause the app | `KeepAwake` in `lib/screen_off_mode.dart` (`wakelock_plus`); `CLAUDE.md` testing constraints |
+| Optional screen-off broadcasting with a notification and Stop button | `lib/screen_off_mode.dart`, `BroadcastKeepAliveService.kt`, Settings › Screen off |
 | Tells you if peripheral mode is unsupported | `isSupported()` in `lib/cps_peripheral.dart`, plus the status text in `lib/main.dart` |
 | Android 7.0 or newer, Bluetooth LE required | `minSdkVersion 24` in the merged release manifest; `uses-feature android.hardware.bluetooth_le required="true"` |
 | No analytics, ads or network | `pubspec.lock` has no analytics, ads or crash SDK; the merged release manifest has no `INTERNET` permission (see `store/data-safety.md`) |
@@ -159,21 +165,23 @@ GOTTA.BIKE: BLE Watts is an independent app. It is not affiliated with, endorsed
 
 ## Features to confirm before submitting
 
-Other work streams are adding these features in this release. Before you
-submit, confirm each one is on `main` and works on a physical phone. If a
-feature did not ship, delete its text:
+All of these are on `main` (merge `ebfedd3`, 2026-09-16) with unit and
+widget tests. Before you submit, check each one on a **physical phone** with
+the release build. If one doesn't work and you can't fix it, delete its
+text from the full description:
 
-| Feature | Lines to delete from the full description if it did not ship |
-|---|---|
-| Heart Rate sensor (`0x180D`) | `• Heart Rate (standard service 0x180D)`, and `heart rate` in the second paragraph |
-| Speed & Cadence sensor (`0x1816`) | `• Cycling Speed and Cadence (standard service 0x1816)`, and `or speed` in the second paragraph |
-| Profile picker and in-app profile editor | `• Choose a built-in profile or build your own in the profile editor` |
-| Off-road "Surface Crr" profile | `• Surface Crr profile for comparing rolling resistance on off-road surfaces` |
-| Optional screen-off broadcasting (foreground service) | `• Optional: keep broadcasting with the screen off, ...` |
+| Feature | Status on 2026-09-16 | Lines to delete if it has to go |
+|---|---|---|
+| Heart Rate sensor (`0x180D`) | Shipped; not yet tested with a real central | `• Heart Rate (standard service 0x180D)`, and `heart rate` in the second paragraph |
+| Speed & Cadence sensor (`0x1816`) | Shipped; not yet tested with a real central | `• Cycling Speed and Cadence (standard service 0x1816)`, and `or speed` in the second paragraph |
+| Profile picker and in-app profile editor | Shipped | `• Choose a built-in profile or build your own in the profile editor` |
+| Off-road "Surface Crr" profile | Shipped | `• Surface Crr profile for comparing rolling resistance on off-road surfaces` |
+| Optional screen-off broadcasting (foreground service) | Shipped; checked on an Android 16 emulator, not yet with Zwift on a phone | `• Optional: keep broadcasting with the screen off, ...` |
 
-If you use alternate B, both HR and CSC must have shipped. After any edit,
-re-run the count script. Update `store/privacy-policy.md`,
-`store/privacy-policy.html` and `store/release-checklist.md` to match.
+Alternate B names heart rate and speed, so drop it too if either sensor
+goes. After any edit, re-run the count script and update
+`store/privacy-policy.md`, `store/privacy-policy.html` and
+`store/release-checklist.md` to match.
 
 ## Category
 

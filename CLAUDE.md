@@ -92,6 +92,19 @@ sensor (Settings › Sensors; at least one service is always on). It is a
   `CustomPaint` chart with a live playhead, progress, Run/Stop, a segment
   list, and the selected-profile card with a Change button). Stateless;
   playback state lives in `_EmulatorPageState`.
+- `analysis/fit_cda.py` — offline Python fitter: reads a Zwift `.FIT` ride
+  of a built-in profile and fits CdA / Crr / effective mass with
+  uncertainty, significance of setup deltas, a power/speed timing check and
+  optional plots (`analysis/README.md`). Its `PROFILE` table (used only by
+  `--self-test`; fitting reads the FIT power) mirrors `kCdaCrrMassProfile`
+  — update both together.
+- `assets/icon/generate_icon.py` + `flutter_launcher_icons.yaml` — draw the
+  PLACEHOLDER launcher icons and Play graphics and run
+  `flutter_launcher_icons` (dev dependency) safely; never run that tool on
+  its own (it corrupts `project.pbxproj`, see the yaml).
+- `store/` — Play listing, privacy policy (`.md` + hosted `.html`, keep in
+  sync), Data safety and content-rating answers, release checklist, and the
+  store graphics. Update them when permissions or features change.
 
 ## Protocol invariants (do not break)
 - CPM packet (`0x2A63`) is little-endian: uint16 flags (`0x0020` = crank data
@@ -125,8 +138,13 @@ sensor (Settings › Sensors; at least one service is always on). It is a
 - Install deps: `flutter pub get`
 - Run on device: `flutter run`
 - Analyze / lint: `flutter analyze`
-- Format: `dart format lib/`
+- Format: `dart format lib/ test/`
 - Tests: `flutter test`
+- Analysis self-test: `cd analysis && .venv/bin/python fit_cda.py --self-test`
+  (create the venv per `analysis/README.md`)
+- Icons: `python3 assets/icon/generate_icon.py` (needs Pillow)
+- Release: `flutter build apk --release` / `flutter build appbundle`
+  (debug-signed unless `android/key.properties` exists)
 
 ## Testing constraints
 - BLE peripheral mode does NOT work in the iOS Simulator. A recent Android

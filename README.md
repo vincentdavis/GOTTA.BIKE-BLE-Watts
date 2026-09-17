@@ -29,7 +29,7 @@ control. All values are simulated.
   - **Surface Crr (off-road)** (9 min, gravel or dirt)
 - Keeps the screen on while broadcasting, or (optional, Android) keeps
   broadcasting with the screen off through a foreground service with a
-  persistent notification.
+  persistent notification and a Stop button.
 
 ## CdA / Crr / mass analysis
 
@@ -50,9 +50,11 @@ deltas.
 
 ## Build and run
 
-Requires Flutter (see `pubspec.yaml` for the SDK constraint) and a
-**physical** Android or iOS device. BLE peripheral mode doesn't work in the
-Android emulator or the iOS Simulator.
+Requires Flutter (see `pubspec.yaml` for the SDK constraint). Test with real
+centrals on a **physical** Android or iOS device: BLE peripheral mode doesn't
+work in the iOS Simulator, and a recent Android emulator can advertise on its
+virtual Bluetooth (enough to try the UI) but can't reach Zwift or a bike
+computer.
 
 ```bash
 flutter pub get
@@ -72,6 +74,10 @@ Release builds are signed with `android/key.properties` when it exists and
 fall back to the debug key otherwise (fine for sideloading, rejected by Play).
 See [`store/release-checklist.md`](store/release-checklist.md) for the upload
 key, the App Bundle, and the Play Console steps.
+
+The launcher icons and Play graphics use a **placeholder** mark (a lightning
+bolt between broadcast arcs). `python3 assets/icon/generate_icon.py`
+regenerates them; see that script to swap in the real GOTTA.BIKE artwork.
 
 ## Testing notes
 

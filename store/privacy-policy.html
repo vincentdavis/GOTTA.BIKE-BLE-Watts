@@ -8,7 +8,10 @@
   Owner notes (not shown on the page):
   - Replace every [PLACEHOLDER] before publishing.
   - Keep this page in sync with store/privacy-policy.md.
-  - Remove each passage marked "CONFIRM" if its feature did not ship.
+  - Heart Rate / Speed & Cadence, the profile editor and screen-off
+    broadcasting all shipped (main, 2026-09-16), so every passage below
+    applies. Re-check the permission table against the merged release
+    manifest before each release.
 -->
 <html lang="en">
 <head>
@@ -136,7 +139,6 @@
   </section>
 
   <h2 id="what-the-app-does">What the app does</h2>
-  <!-- CONFIRM: remove "heart rate, speed" if Heart Rate / Speed & Cadence emulation did not ship. -->
   <p>The app makes your phone act as a standard Bluetooth LE cycling sensor so you can test cycling apps,
   bike computers and indoor-training setups. All values it sends (power, cadence, heart rate, speed) are
   simulated: they are numbers you choose or a scripted test profile produces.
@@ -152,9 +154,7 @@
   <ul>
     <li><strong>Presets:</strong> up to five named power and cadence levels.</li>
     <li><strong>Device identity:</strong> the advertised Bluetooth device name and the manufacturer and model strings.</li>
-    <!-- CONFIRM: profile editor shipped. -->
     <li><strong>Test profiles:</strong> custom power profiles you create in the profile editor, and which profile is selected.</li>
-    <!-- CONFIRM: remove "screen-off broadcasting option" if the foreground service did not ship. -->
     <li><strong>Sensor and app settings:</strong> settings for the emulated sensors, such as which sensors are
       on and their values, and app preferences such as the screen-off broadcasting option.</li>
   </ul>
@@ -177,11 +177,10 @@
       name</strong>. The app restores your original name when you tap Stop. If the app is closed
       unexpectedly while broadcasting, your phone may keep the emulator&rsquo;s name. You can change it
       back under Bluetooth settings in Android.</li>
-    <!-- CONFIRM: remove the Heart Rate / Cycling Speed and Cadence clause if those sensors did not ship. -->
     <li>Apps and devices that <strong>connect</strong> to it can read the manufacturer and model strings you set
       and receive the simulated sensor values. These are the standard Cycling Power data (power and crank
-      revolution data, from which receivers calculate cadence) and, where available in this version, Heart
-      Rate and Cycling Speed and Cadence data.</li>
+      revolution data, from which receivers calculate cadence) and, if you turn those sensors on in Settings,
+      Heart Rate and Cycling Speed and Cadence data.</li>
     <li>The app&rsquo;s Bluetooth services don&rsquo;t require pairing, so the data isn&rsquo;t protected from
       other nearby devices. <strong>Don&rsquo;t put personal information such as your full name in the device
       name.</strong></li>
@@ -227,7 +226,6 @@
             library the app uses requires it on those versions. The app <strong>never reads, stores or shares your
             location</strong>. On Android 12 and newer the app doesn&rsquo;t request location at all.</td>
         </tr>
-        <!-- CONFIRM: the next two rows apply only if the optional foreground service shipped. -->
         <tr>
           <td data-label="Permission"><code>FOREGROUND_<wbr>SERVICE</code>, <code>FOREGROUND_<wbr>SERVICE_<wbr>CONNECTED_<wbr>DEVICE</code></td>
           <td data-label="Android versions">9 and newer; the second one on 14 and newer</td>
@@ -235,10 +233,17 @@
             to a connected device while the screen is off.</td>
         </tr>
         <tr>
+          <td data-label="Permission"><code>WAKE_<wbr>LOCK</code></td>
+          <td data-label="Android versions">All</td>
+          <td data-label="Why the app needs it">Only for the optional screen-off broadcasting feature. It keeps the phone&rsquo;s processor
+            running while the screen is off, so the app can keep sending sensor data. It is released when
+            broadcasting stops.</td>
+        </tr>
+        <tr>
           <td data-label="Permission"><code>POST_<wbr>NOTIFICATIONS</code> (Notifications)</td>
           <td data-label="Android versions">13 and newer</td>
           <td data-label="Why the app needs it">Only for the optional screen-off broadcasting feature. It shows the notification that tells you
-            the app is still broadcasting.</td>
+            the app is still broadcasting. Requested when you turn the option on.</td>
         </tr>
       </tbody>
     </table>
@@ -246,10 +251,10 @@
   <p><strong>Screen on.</strong> By default the app keeps your screen on while it is broadcasting, so
   Android doesn&rsquo;t pause it. This uses a standard display setting and needs no permission. When you tap
   Stop, the screen goes back to its normal timeout.</p>
-  <!-- CONFIRM: remove the next paragraph if the optional foreground service did not ship. -->
-  <p><strong>Screen-off broadcasting (optional).</strong> If you turn this option on, the app runs an
-  Android foreground service while it broadcasts. Android shows a notification while it runs. The service
-  stops when you stop broadcasting. Enabling it doesn&rsquo;t make the app collect any data.</p>
+  <p><strong>Screen-off broadcasting (optional).</strong> If you turn this option on in Settings, the app
+  runs an Android foreground service and keeps the processor awake while it broadcasts, instead of keeping
+  the screen on. Android shows a notification with a Stop button while it runs. The service stops when you
+  stop broadcasting or close the app. Enabling it doesn&rsquo;t make the app collect any data.</p>
 
   <h2 id="third-parties">Third parties</h2>
   <p>The app doesn&rsquo;t include any third-party advertising, analytics or tracking SDKs, and it
@@ -274,7 +279,6 @@
 
   <h2 id="choices">Your choices</h2>
   <ul>
-    <!-- CONFIRM: remove "or Notifications" / "or can't show its notification" if the foreground service did not ship. -->
     <li>You can deny or revoke the Nearby devices, Location or Notifications permissions at any time in
       Android settings. Without them the app can&rsquo;t broadcast, or can&rsquo;t show its notification.</li>
     <li>You can stop broadcasting at any time with the Stop button.</li>

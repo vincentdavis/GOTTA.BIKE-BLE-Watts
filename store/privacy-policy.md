@@ -6,16 +6,9 @@ Owner notes (not part of the published policy):
 - Keep this file and store/privacy-policy.html in sync. The HTML is the
   version you host (for example on GitHub Pages) and link from Play Console
   and from inside the app.
-- Several passages describe features planned for this release. Remove each
-  passage whose feature did not ship:
-  * Optional foreground service ("screen-off broadcasting"): the
-    FOREGROUND_SERVICE and POST_NOTIFICATIONS table rows, the "Screen-off
-    broadcasting (optional)" paragraph, "the screen-off broadcasting option"
-    in the storage list, and "Notifications" under "Your choices".
-  * Heart Rate / Speed & Cadence emulation: "heart rate, speed" in "What the
-    app does" and the Heart Rate / Cycling Speed and Cadence clause in the
-    Bluetooth section.
-  * Profile editor: "custom power profiles you create in the profile editor".
+- Heart Rate / Speed & Cadence emulation, the profile editor and screen-off
+  broadcasting (foreground service + wake lock) all shipped (main,
+  2026-09-16), so every passage below applies.
 - Re-check the permission list against the merged release manifest before
   every release (see store/release-checklist.md).
 -->
@@ -95,8 +88,8 @@ you tap **Stop**. While it is broadcasting:
 - Apps and devices that **connect** to it can read the manufacturer and model
   strings you set and receive the simulated sensor values. These are the
   standard Cycling Power data (power and crank revolution data, from which
-  receivers calculate cadence) and, where available in this version, Heart
-  Rate and Cycling Speed and Cadence data.
+  receivers calculate cadence) and, if you turn those sensors on in Settings,
+  Heart Rate and Cycling Speed and Cadence data.
 - The app's Bluetooth services don't require pairing, so the data isn't
   protected from other nearby devices. **Don't put personal information such
   as your full name in the device name.**
@@ -118,17 +111,20 @@ by that app's or device's own privacy policy.
 | `BLUETOOTH`, `BLUETOOTH_ADMIN` | 11 and older only | The older Bluetooth permissions that Android 11 and older use for the same purpose. |
 | `ACCESS_FINE_LOCATION` (Location) | 11 and older only | On Android 11 and older, Android ties Bluetooth LE to the location permission, and the Bluetooth library the app uses requires it on those versions. The app **never reads, stores or shares your location**. On Android 12 and newer the app doesn't request location at all. |
 | `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_CONNECTED_DEVICE` | 9 and newer; the second one on 14 and newer | Only for the optional screen-off broadcasting feature. It lets the app keep sending Bluetooth data to a connected device while the screen is off. |
-| `POST_NOTIFICATIONS` (Notifications) | 13 and newer | Only for the optional screen-off broadcasting feature. It shows the notification that tells you the app is still broadcasting. |
+| `WAKE_LOCK` | All | Only for the optional screen-off broadcasting feature. It keeps the phone's processor running while the screen is off, so the app can keep sending sensor data. It is released when broadcasting stops. |
+| `POST_NOTIFICATIONS` (Notifications) | 13 and newer | Only for the optional screen-off broadcasting feature. It shows the notification that tells you the app is still broadcasting. Requested when you turn the option on. |
 
 **Screen on.** By default the app keeps your screen on while it is
 broadcasting, so Android doesn't pause it. This uses a standard display
 setting and needs no permission. When you tap Stop, the screen goes back to
 its normal timeout.
 
-**Screen-off broadcasting (optional).** If you turn this option on, the app
-runs an Android foreground service while it broadcasts. Android shows a
-notification while it runs. The service stops when you stop broadcasting.
-Enabling it doesn't make the app collect any data.
+**Screen-off broadcasting (optional).** If you turn this option on in
+Settings, the app runs an Android foreground service and keeps the processor
+awake while it broadcasts, instead of keeping the screen on. Android shows a
+notification with a Stop button while it runs. The service stops when you
+stop broadcasting or close the app. Enabling it doesn't make the app collect
+any data.
 
 ## Third parties
 
