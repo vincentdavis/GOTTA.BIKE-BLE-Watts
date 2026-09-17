@@ -98,7 +98,7 @@ class CpmCodec {
     4,
   )..setUint32(0, 0x00000008, Endian.little)).buffer.asUint8List();
 
-  /// Sensor Location (`0x2A5B`), a single enum byte: `5` = Left Crank.
+  /// Sensor Location (`0x2A5D`), a single enum byte: `5` = Left Crank.
   static final Uint8List sensorLocation = Uint8List.fromList(const [0x05]);
 
   /// Builds the 8-byte Cycling Power Measurement packet (`0x2A63`):
