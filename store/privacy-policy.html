@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<!--
+  Privacy policy for GOTTA.BIKE: BLE Watts (Android, ble.make.bike.gotta).
+  Self-contained: no scripts, fonts, trackers or other external requests.
+  Host it as-is (for example on GitHub Pages) and link it from Play Console
+  and from inside the app.
+
+  Owner notes (not shown on the page):
+  - Replace every [PLACEHOLDER] before publishing.
+  - Keep this page in sync with store/privacy-policy.md.
+  - Remove each passage marked "CONFIRM" if its feature did not ship.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy Policy: GOTTA.BIKE: BLE Watts</title>
+  <meta name="description" content="Privacy policy for the Android app GOTTA.BIKE: BLE Watts. No accounts, no ads, no analytics; no personal data collected or shared.">
+  <meta name="color-scheme" content="light dark">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #1c1f23;
+      --muted: #5a6270;
+      --accent: #0b6bcb;
+      --rule: #dfe3e8;
+      --panel: #f4f6f8;
+      --code-bg: #eef1f4;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111418;
+        --fg: #e6e9ed;
+        --muted: #a3acb8;
+        --accent: #6cb4ff;
+        --rule: #2b3139;
+        --panel: #1a1f25;
+        --code-bg: #232a32;
+      }
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    main {
+      max-width: 46rem;
+      margin: 0 auto;
+      padding: 2.5rem 16px 4rem;
+    }
+    h1 { font-size: 1.9rem; line-height: 1.25; margin: 0 0 .5rem; }
+    h2 {
+      font-size: 1.25rem;
+      margin: 2.25rem 0 .75rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--rule);
+    }
+    p, ul { margin: 0 0 1rem; }
+    ul { padding-left: 1.25rem; }
+    li { margin: .35rem 0; }
+    a { color: var(--accent); }
+    code {
+      font: .9em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: var(--code-bg);
+      padding: .1em .35em;
+      border-radius: 4px;
+      overflow-wrap: anywhere;
+    }
+    .meta { color: var(--muted); margin-bottom: 1.5rem; }
+    .summary {
+      background: var(--panel);
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      padding: 1rem 1.25rem .25rem;
+    }
+    .summary h2 { border-top: 0; margin-top: 0; padding-top: 0; }
+    .table-wrap { overflow-x: auto; margin: 0 0 1rem; }
+    table { border-collapse: collapse; width: 100%; min-width: 36rem; font-size: .95rem; }
+    th, td { text-align: left; vertical-align: top; padding: .55rem .6rem; border-bottom: 1px solid var(--rule); }
+    th { background: var(--panel); }
+    td code { overflow-wrap: normal; }
+    th:nth-child(1) { width: 34%; }
+    th:nth-child(2) { width: 16%; }
+    @media (max-width: 640px) {
+      /* Stack the permissions table into cards on phones. */
+      table { min-width: 0; }
+      thead {
+        position: absolute; width: 1px; height: 1px;
+        overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+      }
+      table, tbody, tr, td { display: block; width: 100%; }
+      tr {
+        border: 1px solid var(--rule);
+        border-radius: 10px;
+        padding: .4rem .8rem;
+        margin-bottom: .75rem;
+      }
+      td { border-bottom: 0; padding: .3rem 0; }
+      td::before {
+        content: attr(data-label);
+        display: block;
+        font-size: .75rem;
+        font-weight: 600;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+    }
+    footer { color: var(--muted); font-size: .9rem; margin-top: 2.5rem; border-top: 1px solid var(--rule); padding-top: 1rem; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Privacy Policy: GOTTA.BIKE: BLE Watts</h1>
+  <p class="meta"><strong>Effective date:</strong> [EFFECTIVE DATE]</p>
+
+  <p>This privacy policy describes how the Android app <strong>GOTTA.BIKE: BLE Watts</strong>
+  (package name <code>ble.make.bike.gotta</code>, &ldquo;the app&rdquo;) handles information.
+  The app is published by [DEVELOPER LEGAL NAME] under the GOTTA.BIKE brand (&ldquo;we&rdquo;, &ldquo;us&rdquo;).</p>
+
+  <section class="summary" aria-labelledby="summary">
+    <h2 id="summary">Summary</h2>
+    <ul>
+      <li>The app has <strong>no accounts, no ads, no analytics and no tracking</strong>.</li>
+      <li><strong>We do not collect, receive, sell or share any personal data.</strong> The app has no
+        servers, and the Android release build doesn&rsquo;t request Android&rsquo;s Internet permission.</li>
+      <li>Your settings (presets, device identity, test profiles and sensor settings) are
+        <strong>stored only on your device</strong>.</li>
+      <li>When you tap <strong>Start</strong>, the app broadcasts <strong>simulated</strong> sensor data over
+        Bluetooth Low Energy (BLE) to nearby devices. Anyone nearby can see that broadcast, so
+        <strong>keep personal information out of the device name</strong>.</li>
+    </ul>
+  </section>
+
+  <h2 id="what-the-app-does">What the app does</h2>
+  <!-- CONFIRM: remove "heart rate, speed" if Heart Rate / Speed & Cadence emulation did not ship. -->
+  <p>The app makes your phone act as a standard Bluetooth LE cycling sensor so you can test cycling apps,
+  bike computers and indoor-training setups. All values it sends (power, cadence, heart rate, speed) are
+  simulated: they are numbers you choose or a scripted test profile produces.
+  <strong>The app does not measure anything about you.</strong></p>
+
+  <h2 id="information-we-collect">Information we collect</h2>
+  <p><strong>None.</strong> The app doesn&rsquo;t send any information to us or to any third party. We have no
+  user database, and the app contains no advertising, analytics or crash-reporting software.</p>
+
+  <h2 id="stored-on-device">Information stored on your device</h2>
+  <p>The app saves the following settings in its private storage on your phone, so they are still there
+  the next time you open it:</p>
+  <ul>
+    <li><strong>Presets:</strong> up to five named power and cadence levels.</li>
+    <li><strong>Device identity:</strong> the advertised Bluetooth device name and the manufacturer and model strings.</li>
+    <!-- CONFIRM: profile editor shipped. -->
+    <li><strong>Test profiles:</strong> custom power profiles you create in the profile editor, and which profile is selected.</li>
+    <!-- CONFIRM: remove "screen-off broadcasting option" if the foreground service did not ship. -->
+    <li><strong>Sensor and app settings:</strong> settings for the emulated sensors, such as which sensors are
+      on and their values, and app preferences such as the screen-off broadcasting option.</li>
+  </ul>
+  <p>Other apps can&rsquo;t read this data (Android keeps each app&rsquo;s private storage separate), and we
+  never receive it. You can change or delete presets and profiles in the app. To delete everything, use
+  Android&rsquo;s <strong>Clear storage</strong> option for the app, or uninstall it.</p>
+  <p><strong>Android backup.</strong> If Android backup is turned on for your Google account, Android may
+  include these settings in your device backup so they can be restored on a new phone. Google stores these
+  backups in your Google account. On Android 9 and newer they are end-to-end encrypted with your screen
+  lock PIN, pattern or password. We can&rsquo;t access them. You control backup in your phone&rsquo;s
+  settings.</p>
+
+  <h2 id="bluetooth">Bluetooth: what the app broadcasts</h2>
+  <p>The app sends Bluetooth data only after you tap <strong>Start</strong>, and it stops when you tap
+  <strong>Stop</strong>. While it is broadcasting:</p>
+  <ul>
+    <li>It <strong>advertises</strong> the device name you chose (default &ldquo;GOTTA.BIKE Watts&rdquo;) and the
+      standard sensor services it offers. Any Bluetooth device in range can see the advertisement.</li>
+    <li>To advertise that name, Android temporarily uses it as <strong>your phone&rsquo;s Bluetooth
+      name</strong>. The app restores your original name when you tap Stop. If the app is closed
+      unexpectedly while broadcasting, your phone may keep the emulator&rsquo;s name. You can change it
+      back under Bluetooth settings in Android.</li>
+    <!-- CONFIRM: remove the Heart Rate / Cycling Speed and Cadence clause if those sensors did not ship. -->
+    <li>Apps and devices that <strong>connect</strong> to it can read the manufacturer and model strings you set
+      and receive the simulated sensor values. These are the standard Cycling Power data (power and crank
+      revolution data, from which receivers calculate cadence) and, where available in this version, Heart
+      Rate and Cycling Speed and Cadence data.</li>
+    <li>The app&rsquo;s Bluetooth services don&rsquo;t require pairing, so the data isn&rsquo;t protected from
+      other nearby devices. <strong>Don&rsquo;t put personal information such as your full name in the device
+      name.</strong></li>
+    <li>The app shows how many devices are connected. It doesn&rsquo;t store or send the identifiers of those devices.</li>
+    <li>Your phone&rsquo;s Bluetooth address is assigned by Android. The app can&rsquo;t read or change it.</li>
+  </ul>
+  <p>What a connected app or device does with the values it receives is governed by that app&rsquo;s or
+  device&rsquo;s own privacy policy.</p>
+
+  <h2 id="permissions">Permissions the app uses</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th scope="col">Permission</th><th scope="col">Android versions</th><th scope="col">Why the app needs it</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td data-label="Permission"><code>BLUETOOTH_<wbr>ADVERTISE</code> (Nearby devices)</td>
+          <td data-label="Android versions">12 and newer</td>
+          <td data-label="Why the app needs it">To advertise the emulated sensor so other devices can find it. Requested when you first tap Start.</td>
+        </tr>
+        <tr>
+          <td data-label="Permission"><code>BLUETOOTH_<wbr>CONNECT</code> (Nearby devices)</td>
+          <td data-label="Android versions">12 and newer</td>
+          <td data-label="Why the app needs it">To accept connections from apps and devices, send them sensor data, and apply the advertised device name.</td>
+        </tr>
+        <tr>
+          <td data-label="Permission"><code>BLUETOOTH_<wbr>SCAN</code> (Nearby devices)</td>
+          <td data-label="Android versions">12 and newer</td>
+          <td data-label="Why the app needs it">Required by the Bluetooth library the app uses. It is declared with the <code>neverForLocation</code>
+            flag: the app never uses Bluetooth to work out your location, and it doesn&rsquo;t scan for or record
+            nearby devices.</td>
+        </tr>
+        <tr>
+          <td data-label="Permission"><code>BLUETOOTH</code>, <code>BLUETOOTH_<wbr>ADMIN</code></td>
+          <td data-label="Android versions">11 and older only</td>
+          <td data-label="Why the app needs it">The older Bluetooth permissions that Android 11 and older use for the same purpose.</td>
+        </tr>
+        <tr>
+          <td data-label="Permission"><code>ACCESS_<wbr>FINE_<wbr>LOCATION</code> (Location)</td>
+          <td data-label="Android versions">11 and older only</td>
+          <td data-label="Why the app needs it">On Android 11 and older, Android ties Bluetooth LE to the location permission, and the Bluetooth
+            library the app uses requires it on those versions. The app <strong>never reads, stores or shares your
+            location</strong>. On Android 12 and newer the app doesn&rsquo;t request location at all.</td>
+        </tr>
+        <!-- CONFIRM: the next two rows apply only if the optional foreground service shipped. -->
+        <tr>
+          <td data-label="Permission"><code>FOREGROUND_<wbr>SERVICE</code>, <code>FOREGROUND_<wbr>SERVICE_<wbr>CONNECTED_<wbr>DEVICE</code></td>
+          <td data-label="Android versions">9 and newer; the second one on 14 and newer</td>
+          <td data-label="Why the app needs it">Only for the optional screen-off broadcasting feature. It lets the app keep sending Bluetooth data
+            to a connected device while the screen is off.</td>
+        </tr>
+        <tr>
+          <td data-label="Permission"><code>POST_<wbr>NOTIFICATIONS</code> (Notifications)</td>
+          <td data-label="Android versions">13 and newer</td>
+          <td data-label="Why the app needs it">Only for the optional screen-off broadcasting feature. It shows the notification that tells you
+            the app is still broadcasting.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Screen on.</strong> By default the app keeps your screen on while it is broadcasting, so
+  Android doesn&rsquo;t pause it. This uses a standard display setting and needs no permission. When you tap
+  Stop, the screen goes back to its normal timeout.</p>
+  <!-- CONFIRM: remove the next paragraph if the optional foreground service did not ship. -->
+  <p><strong>Screen-off broadcasting (optional).</strong> If you turn this option on, the app runs an
+  Android foreground service while it broadcasts. Android shows a notification while it runs. The service
+  stops when you stop broadcasting. Enabling it doesn&rsquo;t make the app collect any data.</p>
+
+  <h2 id="third-parties">Third parties</h2>
+  <p>The app doesn&rsquo;t include any third-party advertising, analytics or tracking SDKs, and it
+  doesn&rsquo;t share data with anyone.</p>
+  <p>You download the app from Google Play, which is operated by Google under Google&rsquo;s own privacy
+  policy. Through Google Play Console, Google gives app developers aggregated statistics (for example
+  install counts). It also gives technical reports such as crash reports from users who chose to share
+  usage and diagnostics data. Google collects that information, not the app.</p>
+
+  <h2 id="children">Children</h2>
+  <p>The app is a testing tool and is not directed at children. We don&rsquo;t knowingly collect personal
+  information from anyone, including children.</p>
+
+  <h2 id="security">Security</h2>
+  <p>Your settings stay in the app&rsquo;s private storage, which Android&rsquo;s app sandbox protects. The
+  app doesn&rsquo;t transmit your data over the internet. Bluetooth broadcasts are unencrypted by design (see
+  above), so don&rsquo;t put anything sensitive into the fields that the app broadcasts.</p>
+
+  <h2 id="retention">Data retention and deletion</h2>
+  <p>We don&rsquo;t hold any of your data, so there is nothing for us to keep or delete. Settings stored on
+  your phone stay there until you change them, clear the app&rsquo;s storage or uninstall the app.</p>
+
+  <h2 id="choices">Your choices</h2>
+  <ul>
+    <!-- CONFIRM: remove "or Notifications" / "or can't show its notification" if the foreground service did not ship. -->
+    <li>You can deny or revoke the Nearby devices, Location or Notifications permissions at any time in
+      Android settings. Without them the app can&rsquo;t broadcast, or can&rsquo;t show its notification.</li>
+    <li>You can stop broadcasting at any time with the Stop button.</li>
+    <li>You can turn Android backup on or off in your phone&rsquo;s settings.</li>
+  </ul>
+
+  <h2 id="changes">Changes to this policy</h2>
+  <p>If the app&rsquo;s data practices change, for example if a future version adds a feature that needs to
+  send data off your device, we will update this policy and its effective date before that version is
+  released. We will also update the app&rsquo;s Google Play Data safety information.</p>
+
+  <h2 id="contact">Contact</h2>
+  <p>Questions about this policy or the app:</p>
+  <ul>
+    <li>Email: [CONTACT EMAIL]</li>
+    <li>Website: [WEBSITE URL]</li>
+    <li>Developer: [DEVELOPER LEGAL NAME], GOTTA.BIKE</li>
+  </ul>
+
+  <footer>
+    <p>GOTTA.BIKE: BLE Watts is an independent app. It is not affiliated with or endorsed by Zwift, Garmin,
+    Wahoo or the Bluetooth SIG. The Bluetooth&reg; word mark and logos are registered trademarks owned by
+    Bluetooth SIG, Inc.</p>
+  </footer>
+</main>
+</body>
+</html>
