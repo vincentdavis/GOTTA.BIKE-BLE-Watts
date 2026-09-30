@@ -114,17 +114,17 @@ by that app's or device's own privacy policy.
 | `WAKE_LOCK` | All | Only for the optional screen-off broadcasting feature. It keeps the phone's processor running while the screen is off, so the app can keep sending sensor data. It is released when broadcasting stops. |
 | `POST_NOTIFICATIONS` (Notifications) | 13 and newer | Only for the optional screen-off broadcasting feature. It shows the notification that tells you the app is still broadcasting. Requested when you turn the option on. |
 
-**Screen on.** By default the app keeps your screen on while it is
-broadcasting, so Android doesn't pause it. This uses a standard display
-setting and needs no permission. When you tap Stop, the screen goes back to
-its normal timeout.
+**Screen on.** While it is broadcasting, the app keeps your screen on as
+long as the app is open, so Android doesn't pause it. This uses a standard
+display setting and needs no permission. When you tap Stop, the screen goes
+back to its normal timeout.
 
 **Screen-off broadcasting (optional).** If you turn this option on in
-Settings, the app runs an Android foreground service and keeps the processor
-awake while it broadcasts, instead of keeping the screen on. Android shows a
-notification with a Stop button while it runs. The service stops when you
-stop broadcasting or close the app. Enabling it doesn't make the app collect
-any data.
+Settings, the app also runs an Android foreground service and keeps the
+processor awake while it broadcasts, so broadcasting keeps going if the
+screen turns off or you switch apps. Android shows a notification with a
+Stop button while it runs. The service stops when you stop broadcasting or
+close the app. Enabling it doesn't make the app collect any data.
 
 ## Third parties
 

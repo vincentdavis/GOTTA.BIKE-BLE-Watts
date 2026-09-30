@@ -21,7 +21,7 @@ applicationId `ble.make.bike.gotta`). Paste the text blocks below into
 | Short description, alternate A | see below | 80 | 72 |
 | Short description, alternate B | see below | 80 | 75 |
 | Short description, alternate C | see below | 80 | 72 |
-| Full description | see below | 4000 | 3636 (3593 without its 43 line breaks) |
+| Full description | see below | 4000 | 3634 (3591 without its 43 line breaks) |
 | Category | **Tools** (recommended) | n/a | n/a |
 | Tags | up to 5 from Google's list | 5 | n/a |
 | Contact email | `[CONTACT EMAIL]` (required, shown publicly) | n/a | n/a |
@@ -116,8 +116,8 @@ Test-profile mode
 Identity and control
 • Set the advertised device name, the manufacturer name and the model number
 • See a live count of connected subscribers, with one button to start and stop
-• By default the screen stays on while broadcasting, so Android doesn't pause the app
-• Optional: keep broadcasting with the screen off, with a notification and a Stop button shown while it runs
+• The screen stays on while broadcasting, so Android doesn't pause the app
+• Optional: keep broadcasting even if the screen turns off, with a notification and a Stop button shown while it runs
 
 Privacy
 • No account, no ads, no analytics

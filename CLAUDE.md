@@ -58,9 +58,9 @@ sensor (Settings › Sensors; at least one service is always on). It is a
   identity (name, manufacturer, model), and add/edit/delete the presets.
 - `lib/screen_off_mode.dart` — "keep broadcasting with screen off":
   `ScreenOffService` (method channel `gotta.bike/keep_alive`),
-  `KeepAwake` (serialised; holds either the screen wakelock or the service
-  while advertising, falling back to the screen wakelock if the service
-  can't start) and `ScreenOffStore`.
+  `KeepAwake` (serialised; while advertising it always holds the screen
+  wakelock, plus the service in screen-off mode, keeping just the wakelock
+  if the service can't start) and `ScreenOffStore`.
 - `android/app/src/main/kotlin/com/example/cps_emulator/` —
   `BroadcastKeepAliveService.kt` (`connectedDevice` foreground service +
   partial wake lock + ongoing notification with a Stop action; runs no
@@ -165,11 +165,13 @@ sensor (Settings › Sensors; at least one service is always on). It is a
   `UniversalBlePeripheral.getCapabilities().supportsPeripheralMode` at runtime.
 - A backgrounded / screen-off Flutter app is suspended by Android: the 500 ms
   notify timer and the BLE peripheral freeze, so the central (e.g. Zwift) drops
-  the link after its supervision timeout. By default the app keeps the screen
-  on while advertising (`wakelock_plus`, via `KeepAwake`). With Settings ›
-  "Keep broadcasting with screen off" on, `BroadcastKeepAliveService` holds a
-  partial wake lock instead; on the emulator the process then kept running
-  (not frozen) with the screen off and after Home. Swiping the app away or
+  the link after its supervision timeout. While advertising, the app always
+  keeps the screen on as long as it is visible (`wakelock_plus`, via
+  `KeepAwake`). With Settings › "Keep broadcasting with screen off" on,
+  `BroadcastKeepAliveService` also runs and holds a partial wake lock, so
+  broadcasting survives the power button or leaving the app; on the emulator
+  the process then kept running (not frozen) with the screen off and after
+  Home. Swiping the app away or
   finishing the activity stops the service (the broadcast lives in the
   activity's engine). Still to verify on a physical phone with Zwift.
 - Do not replace the native service with `flutter_foreground_task` or any

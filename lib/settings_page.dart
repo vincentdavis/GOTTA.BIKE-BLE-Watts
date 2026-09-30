@@ -116,10 +116,10 @@ class _SettingsPageState extends State<SettingsPage> {
               contentPadding: EdgeInsets.zero,
               title: const Text('Keep broadcasting with screen off'),
               subtitle: const Text(
-                'While broadcasting, keeps the phone awake and shows a '
-                'notification with a Stop button, so the screen can turn '
-                'off. Uses more battery. When this is off, the screen stays '
-                'on while broadcasting.',
+                'While broadcasting, the screen stays on as long as the app '
+                'is open. Turn this on to also keep broadcasting if the '
+                'screen turns off or you switch apps. A notification with a '
+                'Stop button shows while it runs. Uses more battery.',
               ),
               value: _screenOff,
               onChanged: (value) {

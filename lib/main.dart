@@ -55,8 +55,8 @@ class _EmulatorPageState extends State<EmulatorPage> {
   final ScreenOffStore _screenOffStore = ScreenOffStore();
   final ScreenOffService _screenOffService = ScreenOffService();
 
-  /// Keeps the app running while advertising: the screen-off service when
-  /// [_screenOffEnabled], otherwise a screen wakelock.
+  /// Keeps the app running while advertising: a screen wakelock, plus the
+  /// screen-off service when [_screenOffEnabled].
   late final KeepAwake _keepAwake = KeepAwake(
     service: _screenOffService,
     screenWakelock: (on) => on ? WakelockPlus.enable() : WakelockPlus.disable(),
@@ -243,7 +243,7 @@ class _EmulatorPageState extends State<EmulatorPage> {
         advertising: _advertising,
         screenOff: _screenOffEnabled,
         title: 'Broadcasting as “${_peripheral.advertisedName}”',
-        text: 'The screen can turn off. Tap to open the app.',
+        text: 'Keeps going with the screen off. Tap to open the app.',
       );
     } catch (e) {
       if (mounted) setState(() => _status = 'Keep-awake error: $e');
@@ -253,16 +253,18 @@ class _EmulatorPageState extends State<EmulatorPage> {
 
   /// What the status line says about the keep-awake [mode].
   Future<String> _keepAwakeNote(KeepAwakeMode mode) async {
-    if (mode == KeepAwakeMode.screenOff) {
+    if (mode == KeepAwakeMode.screenOnAndService) {
       return await _screenOffService.notificationsAllowed()
-          ? 'The screen can turn off.'
-          : 'The screen can turn off. Notifications are off, so the '
-                'broadcast notification is hidden.';
+          ? 'Broadcasting keeps going if the screen turns off.'
+          : 'Broadcasting keeps going if the screen turns off. '
+                'Notifications are off, so the broadcast notification is '
+                'hidden.';
     }
     final error = _keepAwake.lastError;
     return error == null
         ? ''
-        : 'Screen-off mode didn’t start ($error), so the screen stays on.';
+        : 'Screen-off mode didn’t start ($error), so broadcasting stops if '
+              'the screen turns off.';
   }
 
   Future<void> _loadScreenOff() async {
@@ -284,7 +286,8 @@ class _EmulatorPageState extends State<EmulatorPage> {
       setState(() {
         _status = note.isNotEmpty
             ? note
-            : 'The screen stays on while broadcasting.';
+            : 'Screen-off mode is off, so keep the app open and the screen '
+                  'on.';
       });
     }
   }

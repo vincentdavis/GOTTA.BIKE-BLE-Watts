@@ -102,53 +102,66 @@ void main() {
       },
     );
 
-    test('screen-off setting on: runs the service, then stops it', () async {
-      final mode = await keepAwake.update(
-        advertising: true,
-        screenOff: true,
-        title: 'Broadcasting as “X”',
-        text: 'Tap to open',
-      );
-      expect(mode, KeepAwakeMode.screenOff);
-      expect(native.running, isTrue);
-      expect(native.lastStartArgs, {
-        'title': 'Broadcasting as “X”',
-        'text': 'Tap to open',
-      });
-      expect(keepAwake.lastError, isNull);
+    test(
+      'screen-off setting on: keeps the screen on AND runs the service',
+      () async {
+        final mode = await keepAwake.update(
+          advertising: true,
+          screenOff: true,
+          title: 'Broadcasting as “X”',
+          text: 'Tap to open',
+        );
+        expect(mode, KeepAwakeMode.screenOnAndService);
+        expect(native.running, isTrue);
+        expect(native.lastStartArgs, {
+          'title': 'Broadcasting as “X”',
+          'text': 'Tap to open',
+        });
+        expect(keepAwake.lastError, isNull);
 
-      await keepAwake.update(advertising: false, screenOff: true);
-      expect(native.running, isFalse);
-      expect(native.log, ['start', 'stop']); // the screen wakelock is unused
-    });
+        expect(
+          await keepAwake.update(advertising: false, screenOff: true),
+          KeepAwakeMode.none,
+        );
+        expect(native.running, isFalse);
+        expect(native.log, ['wake on', 'start', 'stop', 'wake off']);
+      },
+    );
 
-    test('a service that fails to start falls back to screen on', () async {
+    test('a service that fails to start leaves just the screen on', () async {
       native.startError = 'Bluetooth permission missing';
       final mode = await keepAwake.update(advertising: true, screenOff: true);
       expect(mode, KeepAwakeMode.screenOn);
       expect(keepAwake.lastError, 'Bluetooth permission missing');
-      expect(native.log, ['start', 'stop', 'wake on']);
+      expect(native.log, ['wake on', 'start', 'stop']);
 
-      // Next time it starts: the service takes over, then the screen is freed.
+      // The next update tries again; the screen stays on throughout.
       native.startError = null;
       native.log.clear();
       expect(
         await keepAwake.update(advertising: true, screenOff: true),
-        KeepAwakeMode.screenOff,
+        KeepAwakeMode.screenOnAndService,
       );
       expect(keepAwake.lastError, isNull);
-      expect(native.log, ['start', 'wake off']);
+      expect(native.log, ['start']);
     });
 
-    test('switching to screen on takes the wakelock before stopping', () async {
-      await keepAwake.update(advertising: true, screenOff: true);
-      native.log.clear();
-      expect(
-        await keepAwake.update(advertising: true, screenOff: false),
-        KeepAwakeMode.screenOn,
-      );
-      expect(native.log, ['wake on', 'stop']);
-    });
+    test(
+      'toggling the setting while advertising only starts/stops the service',
+      () async {
+        await keepAwake.update(advertising: true, screenOff: false);
+        native.log.clear();
+        expect(
+          await keepAwake.update(advertising: true, screenOff: true),
+          KeepAwakeMode.screenOnAndService,
+        );
+        expect(
+          await keepAwake.update(advertising: true, screenOff: false),
+          KeepAwakeMode.screenOn,
+        );
+        expect(native.log, ['start', 'stop']); // the screen stays on throughout
+      },
+    );
 
     test('unchanged state does nothing', () async {
       await keepAwake.update(advertising: true, screenOff: true);
@@ -174,12 +187,38 @@ void main() {
       final start = keepAwake.update(advertising: true, screenOff: true);
       final stop = keepAwake.update(advertising: false, screenOff: true);
       await Future<void>.delayed(Duration.zero);
-      expect(native.log, ['start']); // the stop waits for the start
+      expect(native.log, ['wake on', 'start']); // the stop waits
       native.startGate!.complete();
-      expect(await start, KeepAwakeMode.screenOff);
+      expect(await start, KeepAwakeMode.screenOnAndService);
       expect(await stop, KeepAwakeMode.none);
-      expect(native.log, ['start', 'stop']);
+      expect(native.log, ['wake on', 'start', 'stop', 'wake off']);
       expect(native.running, isFalse);
+    });
+
+    test('a step that throws leaves the mode matching what is held', () async {
+      var failRelease = true;
+      final flaky = KeepAwake(
+        service: service,
+        screenWakelock: (on) async {
+          if (!on && failRelease) throw StateError('wakelock busy');
+          native.log.add(on ? 'wake on' : 'wake off');
+        },
+      );
+      await flaky.update(advertising: true, screenOff: true);
+      await expectLater(
+        flaky.update(advertising: false, screenOff: true),
+        throwsStateError,
+      );
+      // The service stopped; the screen wakelock is still held.
+      expect(flaky.mode, KeepAwakeMode.screenOn);
+
+      // A retry releases only what is left.
+      failRelease = false;
+      expect(
+        await flaky.update(advertising: false, screenOff: true),
+        KeepAwakeMode.none,
+      );
+      expect(native.log, ['wake on', 'start', 'stop', 'wake off']);
     });
 
     test('a service that never answers times out', () async {
@@ -197,7 +236,7 @@ void main() {
       );
       expect(impatient.lastError, 'the service did not respond');
       // It is told to stop in case it comes up late.
-      expect(native.log, ['start', 'stop', 'wake on']);
+      expect(native.log, ['wake on', 'start', 'stop']);
     });
   });
 

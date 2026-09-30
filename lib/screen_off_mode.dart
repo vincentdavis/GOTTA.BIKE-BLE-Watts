@@ -1,14 +1,16 @@
 /// "Keep broadcasting with screen off" (Android only).
 ///
 /// Android freezes a backgrounded app and lets the CPU sleep, which stops the
-/// 500 ms notify timer, so by default the app keeps the screen on while
-/// advertising. With this mode on, a small native foreground service
-/// (`BroadcastKeepAliveService.kt`, type `connectedDevice`) holds a partial
-/// wake lock instead, and shows an ongoing notification with a Stop button.
-/// The BLE work itself stays in this isolate: the service runs no Dart.
+/// 500 ms notify timer. So while advertising, the app always keeps the screen
+/// on as long as it is open. With this mode on, a small native foreground
+/// service (`BroadcastKeepAliveService.kt`, type `connectedDevice`) also holds
+/// a partial wake lock, so broadcasting keeps going when the screen turns off
+/// (e.g. the power button) or the user switches apps, and shows an ongoing
+/// notification with a Stop button. The BLE work itself stays in this
+/// isolate: the service runs no Dart.
 ///
-/// [ScreenOffService] is the method-channel glue, [KeepAwake] decides which
-/// mechanism is active, and [ScreenOffStore] persists the setting.
+/// [ScreenOffService] is the method-channel glue, [KeepAwake] holds the
+/// mechanisms, and [ScreenOffStore] persists the setting.
 library;
 
 import 'dart:async';
@@ -96,19 +98,21 @@ class ScreenOffService {
   }
 }
 
-/// How the app is kept running while it advertises.
+/// What the app holds to keep running while it advertises.
 enum KeepAwakeMode {
   /// Not advertising: nothing is held.
   none,
 
-  /// The screen is kept on (`wakelock_plus`), so the app stays in front.
+  /// The screen is kept on while the app is open (`wakelock_plus`).
   screenOn,
 
-  /// [ScreenOffService] runs: the screen may turn off.
-  screenOff,
+  /// The screen is kept on while the app is open, and [ScreenOffService]
+  /// runs, so broadcasting also survives the screen turning off.
+  screenOnAndService,
 }
 
-/// Chooses and holds the keep-awake mechanism for the current state.
+/// Holds the keep-awake mechanisms for the current state: the screen
+/// wakelock whenever advertising, plus [ScreenOffService] in screen-off mode.
 class KeepAwake {
   KeepAwake({required this.service, required this.screenWakelock});
 
@@ -118,20 +122,21 @@ class KeepAwake {
   /// Turns the keep-screen-on wakelock on or off.
   final Future<void> Function(bool enable) screenWakelock;
 
-  /// The mechanism currently held.
+  /// What is currently held.
   KeepAwakeMode get mode => _mode;
   KeepAwakeMode _mode = KeepAwakeMode.none;
 
-  /// Why screen-off mode didn't start in the last [update], if it didn't.
+  /// Why the service didn't start in the last [update], if it didn't.
   String? get lastError => _lastError;
   String? _lastError;
 
   Future<void> _queue = Future.value();
 
   /// Holds what [advertising] and the [screenOff] setting call for: nothing
-  /// when not advertising, else the screen-off service (falling back to
-  /// keeping the screen on if it can't start). [title] and [text] are the
-  /// service notification's. Calls run one at a time.
+  /// when not advertising; otherwise the screen wakelock, plus the service
+  /// when [screenOff] is on (if the service can't start, just the wakelock,
+  /// with [lastError] set). [title] and [text] are the service
+  /// notification's. Calls run one at a time.
   Future<KeepAwakeMode> update({
     required bool advertising,
     required bool screenOff,
@@ -152,33 +157,30 @@ class KeepAwake {
     String text,
   ) async {
     _lastError = null;
-    var target = !advertising
-        ? KeepAwakeMode.none
-        : (screenOff && service.isSupported)
-        ? KeepAwakeMode.screenOff
-        : KeepAwakeMode.screenOn;
-    if (target == _mode) return _mode;
-
-    if (target == KeepAwakeMode.screenOff) {
+    // _mode is updated after each step, so a step that throws leaves it
+    // describing what is actually held.
+    if (advertising && _mode == KeepAwakeMode.none) {
+      await screenWakelock(true);
+      _mode = KeepAwakeMode.screenOn;
+    }
+    final wantService = advertising && screenOff && service.isSupported;
+    if (wantService && _mode == KeepAwakeMode.screenOn) {
       final error = await service.start(title: title, text: text);
-      if (error != null) {
+      if (error == null) {
+        _mode = KeepAwakeMode.screenOnAndService;
+      } else {
         _lastError = error;
         await service.stop(); // in case it started after the timeout
-        target = KeepAwakeMode.screenOn;
       }
-    }
-    // Take the new mechanism before releasing the old one, so the app is
-    // never left without either.
-    if (target == KeepAwakeMode.screenOn && _mode != KeepAwakeMode.screenOn) {
-      await screenWakelock(true);
-    }
-    if (_mode == KeepAwakeMode.screenOn && target != KeepAwakeMode.screenOn) {
-      await screenWakelock(false);
-    }
-    if (_mode == KeepAwakeMode.screenOff && target != KeepAwakeMode.screenOff) {
+    } else if (!wantService && _mode == KeepAwakeMode.screenOnAndService) {
       await service.stop();
+      _mode = KeepAwakeMode.screenOn;
     }
-    return _mode = target;
+    if (!advertising && _mode == KeepAwakeMode.screenOn) {
+      await screenWakelock(false);
+      _mode = KeepAwakeMode.none;
+    }
+    return _mode;
   }
 }
 

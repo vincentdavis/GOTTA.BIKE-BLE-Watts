@@ -27,9 +27,9 @@ control. All values are simulated.
   editor. Built-ins:
   - **CdA · Crr · Mass estimation** (10 min, tarmac)
   - **Surface Crr (off-road)** (9 min, gravel or dirt)
-- Keeps the screen on while broadcasting, or (optional, Android) keeps
-  broadcasting with the screen off through a foreground service with a
-  persistent notification and a Stop button.
+- Keeps the screen on while broadcasting. Optionally (Android), it also
+  keeps broadcasting if the screen turns off or you switch apps, through a
+  foreground service with a persistent notification and a Stop button.
 
 ## CdA / Crr / mass analysis
 
@@ -87,9 +87,9 @@ regenerates them; see that script to swap in the real GOTTA.BIKE artwork.
   Power Measurement.
 - Android needs a chipset that supports BLE advertising (peripheral mode).
   The app tells you if it doesn't.
-- Android suspends a backgrounded app. By default the app keeps the screen on
-  while broadcasting; turn on screen-off broadcasting in Settings if you need
-  it.
+- Android suspends a backgrounded app, so the app keeps the screen on while
+  broadcasting. Turn on screen-off broadcasting in Settings to keep going if
+  the screen turns off or you switch apps.
 - iOS advertises standard service UUIDs only while the app is in the
   foreground.
 

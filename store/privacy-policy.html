@@ -248,13 +248,14 @@
       </tbody>
     </table>
   </div>
-  <p><strong>Screen on.</strong> By default the app keeps your screen on while it is broadcasting, so
-  Android doesn&rsquo;t pause it. This uses a standard display setting and needs no permission. When you tap
-  Stop, the screen goes back to its normal timeout.</p>
+  <p><strong>Screen on.</strong> While it is broadcasting, the app keeps your screen on as long as the app
+  is open, so Android doesn&rsquo;t pause it. This uses a standard display setting and needs no permission.
+  When you tap Stop, the screen goes back to its normal timeout.</p>
   <p><strong>Screen-off broadcasting (optional).</strong> If you turn this option on in Settings, the app
-  runs an Android foreground service and keeps the processor awake while it broadcasts, instead of keeping
-  the screen on. Android shows a notification with a Stop button while it runs. The service stops when you
-  stop broadcasting or close the app. Enabling it doesn&rsquo;t make the app collect any data.</p>
+  also runs an Android foreground service and keeps the processor awake while it broadcasts, so
+  broadcasting keeps going if the screen turns off or you switch apps. Android shows a notification with a
+  Stop button while it runs. The service stops when you stop broadcasting or close the app. Enabling it
+  doesn&rsquo;t make the app collect any data.</p>
 
   <h2 id="third-parties">Third parties</h2>
   <p>The app doesn&rsquo;t include any third-party advertising, analytics or tracking SDKs, and it
