@@ -63,24 +63,26 @@ cp android/key.properties.example android/key.properties
 - [ ] Keep the `.jks` file **outside the repo** and back it up (password
       manager or encrypted storage). `key.properties`, `*.jks` and
       `*.keystore` are git-ignored; never commit them.
-- [ ] To let GitHub Actions sign releases with the same key, add it as
-      repository secrets (see [Automated releases](#automated-releases-github-actions)).
+- [ ] `tool/release.sh` signs GitHub releases with this key on this Mac
+      (see [Releases on GitHub](#releases-on-github)); the key never goes to
+      GitHub.
 
 ## 4. Version
 
-- [ ] **Releases built by GitHub Actions** take their version from the tag
-      (`v1.0.1` → versionName `1.0.1`, versionCode `1000001`), so there is
-      nothing to bump: just use a higher tag each time.
+- [ ] **Releases made with `tool/release.sh`** take their version from the
+      command (`tool/release.sh 1.0.1` → versionName `1.0.1`, versionCode
+      `1000001`), so there is nothing to bump: just use a higher version each
+      time.
 - [ ] **Local builds**: bump `version:` in `pubspec.yaml`. The part after `+`
       is the Android `versionCode` and must increase with **every** upload
       (for example `1.0.0+1` → `1.0.1+2`).
 
 ## 5. Build the App Bundle
 
-Play requires an Android App Bundle (`.aab`) for new apps. Tagged releases
-built by GitHub Actions already include a signed `.aab` (checked against the
-debug key automatically); download it from the GitHub Release and skip to
-step 6. To build one locally instead:
+Play requires an Android App Bundle (`.aab`) for new apps. `tool/release.sh`
+already builds a signed `.aab` (and refuses a debug-signed one); it is
+attached to the GitHub Release and kept in `build/release/vX.Y.Z/`, so you can
+skip to step 6. To build one by hand instead:
 
 ```bash
 flutter build appbundle
@@ -199,71 +201,62 @@ keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab
 - [ ] Re-check the Data safety, content rating and foreground service
       answers whenever features or permissions change.
 
-## Automated releases (GitHub Actions)
+## Releases on GitHub
 
 Repo: https://github.com/vincentdavis/GOTTA.BIKE-BLE-Watts
 
-- **CI** (`.github/workflows/ci.yml`) runs on every push to `main` and every
-  pull request: formatting, `flutter analyze`, `flutter test`, a release-mode
-  APK build and the analysis self-test. Its APK (an artifact kept 14 days) is
-  signed with a throwaway debug key: fine for a quick test, but it won't
-  install over a release.
-- **Release** (`.github/workflows/release.yml`) runs when you push a tag like
-  `v1.0.0`. It builds the APK and App Bundle signed with your upload key,
-  fails if either is debug-signed, and publishes a GitHub Release with both
-  files and `SHA256SUMS.txt`.
-
-### One-time setup: signing secrets
-
-Create the upload key first (step 3). Then add four repository secrets. Run
-these yourself: `gh` asks for each value and doesn't echo it.
-
-```bash
-base64 -i ~/gotta-bike-ble-watts-upload.jks | gh secret set ANDROID_KEYSTORE_BASE64 --repo vincentdavis/GOTTA.BIKE-BLE-Watts
-```
-
-```bash
-gh secret set ANDROID_KEYSTORE_PASSWORD --repo vincentdavis/GOTTA.BIKE-BLE-Watts
-```
-
-```bash
-gh secret set ANDROID_KEY_ALIAS --repo vincentdavis/GOTTA.BIKE-BLE-Watts --body upload
-```
-
-```bash
-gh secret set ANDROID_KEY_PASSWORD --repo vincentdavis/GOTTA.BIKE-BLE-Watts
-```
-
-`ANDROID_KEY_PASSWORD` is usually the same as the keystore password (keytool
-uses one password for both unless you set them separately). You can also add
-the secrets in the browser under Settings › Secrets and variables › Actions.
+Releases are built and signed **on this Mac** by `tool/release.sh`, then
+uploaded to the repo's Releases page, so the upload key never leaves this
+machine. GitHub only runs **CI** (`.github/workflows/ci.yml`) on every push
+to `main` and every pull request: formatting, `flutter analyze`,
+`flutter test`, an APK build and the analysis self-test. The CI APK (an
+artifact kept 14 days) is signed with a throwaway debug key, so it's only for
+quick tests and won't install over a release.
 
 ### Cutting a release
 
+Needs `android/key.properties` (step 3), the GitHub CLI logged in
+(`gh auth login`), and a clean `main` that is pushed to GitHub.
+
 ```bash
-git tag v1.0.0
+tool/release.sh 1.0.0 --dry-run
 ```
 
 ```bash
-git push origin v1.0.0
+tool/release.sh 1.0.0
 ```
 
-Watch it under the repo's **Actions** tab. To rebuild an existing tag, run
-the **Release** workflow by hand and enter the tag.
+The dry run checks, tests and builds without tagging or uploading. The real
+run then:
+
+1. Refuses to continue if the tree is dirty, `main` isn't pushed, the version
+   isn't higher than the last release, or the key file is missing.
+2. Runs the formatter check, analyzer and tests.
+3. Builds the APK and App Bundle as version `1.0.0` (versionCode `1000000`)
+   and checks both are signed with the upload key, not the debug key.
+4. Tags `v1.0.0`, pushes the tag, and creates the GitHub Release with the
+   APK, the App Bundle and `SHA256SUMS.txt`. The release notes include the
+   signing certificate's SHA-256 fingerprint.
+
+The files also stay in `build/release/v1.0.0/`. If the upload fails after the
+tag is pushed, the script prints the `gh release create` command to retry.
 
 ### Things to know
 
-- [ ] **Signatures decide what installs over what.** Every GitHub release is
-      signed with the upload key, so each one installs over the last. Builds
-      signed with the debug key (`flutter run`, local builds without
+- [ ] **Signatures decide what installs over what.** Every release is signed
+      with the upload key, so each one installs over the last. Builds signed
+      with the debug key (`flutter run`, local builds without
       `key.properties`, CI artifacts) won't: uninstall the app once before
       switching. The same goes for Play: with Play App Signing, Google
       re-signs the app, so a phone can't move between the GitHub APK and the
       Play version without uninstalling.
 - [ ] **Version codes only go up.** Android refuses to install a lower
-      versionCode over a higher one, so never reuse or lower a tag.
-- [ ] **Keep `FLUTTER_VERSION` current.** Both workflows pin the Flutter
-      version; update it in both files when you upgrade Flutter locally.
+      versionCode over a higher one, so the script won't release a version
+      lower than the last one.
+- [ ] **Back up the upload key.** Releases can only come from a machine that
+      has it. Lose it and every user has to uninstall to move to a new key.
+- [ ] **Keep CI's `FLUTTER_VERSION` current** in `.github/workflows/ci.yml`
+      when you upgrade Flutter locally.
 
 ## Sources
 
