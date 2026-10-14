@@ -1,5 +1,7 @@
 # GOTTA.BIKE: BLE Watts
 
+[![CI](https://github.com/vincentdavis/GOTTA.BIKE-BLE-Watts/actions/workflows/ci.yml/badge.svg)](https://github.com/vincentdavis/GOTTA.BIKE-BLE-Watts/actions/workflows/ci.yml)
+
 A Flutter app that turns a phone into a **Bluetooth LE cycling sensor
 emulator**. It advertises standard BLE sensor services, so bike computers,
 cycling apps (for example Zwift) and BLE tools (for example nRF Connect) can
@@ -75,6 +77,13 @@ fall back to the debug key otherwise (fine for sideloading, rejected by Play).
 See [`store/release-checklist.md`](store/release-checklist.md) for the upload
 key, the App Bundle, and the Play Console steps.
 
+**Releases:** pushing a tag like `v1.0.0` makes GitHub Actions build a signed
+APK and App Bundle and publish them on the
+[Releases](https://github.com/vincentdavis/GOTTA.BIKE-BLE-Watts/releases)
+page. To install on a phone, download the `.apk` from there. Every push to
+`main` also runs the tests and a build (CI). Setup and signing secrets:
+[`store/release-checklist.md`](store/release-checklist.md#automated-releases-github-actions).
+
 The launcher icons and Play graphics use a **placeholder** mark (a lightning
 bolt between broadcast arcs). `python3 assets/icon/generate_icon.py`
 regenerates them; see that script to swap in the real GOTTA.BIKE artwork.
@@ -115,4 +124,4 @@ owned by Bluetooth SIG, Inc.
 
 ## License
 
-[LICENSE PLACEHOLDER: choose a license before publishing the source.]
+MIT. See [`LICENSE`](LICENSE).
