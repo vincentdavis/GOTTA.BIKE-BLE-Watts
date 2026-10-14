@@ -145,6 +145,14 @@ sensor (Settings › Sensors; at least one service is always on). It is a
 - Icons: `python3 assets/icon/generate_icon.py` (needs Pillow)
 - Release: `flutter build apk --release` / `flutter build appbundle`
   (debug-signed unless `android/key.properties` exists)
+- GitHub (https://github.com/vincentdavis/GOTTA.BIKE-BLE-Watts, public):
+  `.github/workflows/ci.yml` checks every push to `main` / PR (format,
+  analyze, test, APK build, analysis self-test). `release.yml` runs on a
+  `vX.Y.Z` tag: version from the tag (versionCode = X*1e6 + Y*1e3 + Z),
+  signed with the upload key from repo secrets `ANDROID_KEYSTORE_BASE64` /
+  `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`,
+  fails if debug-signed, publishes APK + AAB + SHA256SUMS. Both pin
+  `FLUTTER_VERSION`; keep it in step with local Flutter.
 
 ## Testing constraints
 - BLE peripheral mode does NOT work in the iOS Simulator. A recent Android

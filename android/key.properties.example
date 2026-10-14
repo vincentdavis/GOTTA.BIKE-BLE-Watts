@@ -2,7 +2,7 @@
 #
 # 1. Generate your own keystore (choose your own passwords when prompted):
 #
-#      keytool -genkey -v -keystore ~/cps-emulator-upload.jks \
+#      keytool -genkey -v -keystore ~/gotta-bike-ble-watts-upload.jks \
 #        -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 -alias upload
 #
 #    Keep the .jks file OUTSIDE this repo and back it up somewhere safe — if you
@@ -20,4 +20,4 @@
 storePassword=CHANGEME
 keyPassword=CHANGEME
 keyAlias=upload
-storeFile=/absolute/path/to/cps-emulator-upload.jks
+storeFile=/absolute/path/to/gotta-bike-ble-watts-upload.jks

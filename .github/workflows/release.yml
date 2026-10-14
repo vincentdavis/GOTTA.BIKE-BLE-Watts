@@ -1,0 +1,147 @@
+# Builds a signed Android release and publishes it as a GitHub Release.
+#
+# Trigger: push a tag like v1.2.3 (`git tag v1.2.3 && git push origin v1.2.3`),
+# or run it by hand from the Actions tab for an existing tag.
+#
+# Versions come from the tag, not pubspec.yaml: v1.2.3 builds versionName
+# 1.2.3 and versionCode 1002003 (major * 1,000,000 + minor * 1,000 + patch),
+# so a later tag always installs over an earlier one. Minor and patch must be
+# below 1000.
+#
+# Signing uses the upload key from four repository secrets (see
+# store/release-checklist.md, "Automated releases"). Without them the run
+# fails rather than publishing an APK signed with a throwaway debug key,
+# which could never be updated in place.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build, e.g. v1.0.0"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  # Keep in step with ci.yml and the Flutter used for local builds.
+  FLUTTER_VERSION: "3.44.7"
+
+jobs:
+  android:
+    name: Build and publish Android release
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Work out the version from the tag
+        id: version
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          if ! [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::Tag '$TAG' must look like v1.2.3."
+            exit 1
+          fi
+          major=${BASH_REMATCH[1]} minor=${BASH_REMATCH[2]} patch=${BASH_REMATCH[3]}
+          if (( 10#$minor > 999 || 10#$patch > 999 )); then
+            echo "::error::Minor and patch must be below 1000 (tag '$TAG')."
+            exit 1
+          fi
+          code=$(( 10#$major * 1000000 + 10#$minor * 1000 + 10#$patch ))
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "name=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "Version ${TAG#v} (versionCode $code)"
+
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ steps.version.outputs.tag }}
+
+      - name: Set up release signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          missing=""
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD \
+                      ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing. See store/release-checklist.md, \"Automated releases\"."
+            exit 1
+          fi
+          keystore="$RUNNER_TEMP/upload-keystore.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          # Read by android/app/build.gradle.kts; gitignored, and the runner
+          # is discarded after the job.
+          {
+            echo "storeFile=$keystore"
+            echo "storePassword=$ANDROID_KEYSTORE_PASSWORD"
+            echo "keyAlias=$ANDROID_KEY_ALIAS"
+            echo "keyPassword=$ANDROID_KEY_PASSWORD"
+          } > android/key.properties
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - run: flutter pub get
+
+      - run: flutter test
+
+      - name: Build APK and App Bundle
+        env:
+          NAME: ${{ steps.version.outputs.name }}
+          CODE: ${{ steps.version.outputs.code }}
+        run: |
+          flutter build apk --release --build-name="$NAME" --build-number="$CODE"
+          flutter build appbundle --release --build-name="$NAME" --build-number="$CODE"
+
+      - name: Check they are signed with the upload key
+        run: |
+          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -n 1)apksigner"
+          "$apksigner" verify --print-certs build/app/outputs/flutter-apk/app-release.apk | tee apk-signer.txt
+          keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab | tee aab-signer.txt
+          if grep -q "CN=Android Debug" apk-signer.txt aab-signer.txt; then
+            echo "::error::A build is signed with the debug key, not the upload key."
+            exit 1
+          fi
+
+      - name: Collect release files
+        env:
+          NAME: ${{ steps.version.outputs.name }}
+        run: |
+          mkdir dist
+          cp build/app/outputs/flutter-apk/app-release.apk "dist/gotta-bike-ble-watts-$NAME.apk"
+          cp build/app/outputs/bundle/release/app-release.aab "dist/gotta-bike-ble-watts-$NAME.aab"
+          (cd dist && sha256sum -- * > SHA256SUMS.txt && cat SHA256SUMS.txt)
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: GOTTA.BIKE BLE Watts ${{ steps.version.outputs.name }}
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          files: dist/*
+          body: |
+            **Install on an Android phone:** download `gotta-bike-ble-watts-${{ steps.version.outputs.name }}.apk` and open it (allow installs from your browser or file manager when asked). It installs over earlier releases from this page.
+
+            `.aab` is the App Bundle for Google Play uploads. `SHA256SUMS.txt` has checksums for both files.
