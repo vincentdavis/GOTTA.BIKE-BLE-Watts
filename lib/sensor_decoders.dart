@@ -225,7 +225,11 @@ class SensorDecoders {
       final revs = r.u32();
       final time = r.u16();
       if (revs == null || time == null) return null;
-      wheel = (revolutions: revs, lastEventTime: time, timeUnitsPerSecond: 2048);
+      wheel = (
+        revolutions: revs,
+        lastEventTime: time,
+        timeUnitsPerSecond: 2048,
+      );
     }
     CrankCounters? crank;
     if (flags & cpCrankRevolution != 0) {
@@ -294,7 +298,11 @@ class SensorDecoders {
       final revs = r.u32();
       final time = r.u16();
       if (revs == null || time == null) return null;
-      wheel = (revolutions: revs, lastEventTime: time, timeUnitsPerSecond: 1024);
+      wheel = (
+        revolutions: revs,
+        lastEventTime: time,
+        timeUnitsPerSecond: 1024,
+      );
     }
     CrankCounters? crank;
     if (flags & 0x02 != 0) {
@@ -547,6 +555,25 @@ class MeasurementInterpreter {
     heartRateBpm: r.heartRateBpm,
     resistanceLevel: r.resistanceLevel,
   );
+
+  /// Decodes a raw notification of [kind] received at [now]; null if the
+  /// packet is malformed.
+  SensorSample? decode(MeasurementKind kind, List<int> bytes, DateTime now) {
+    switch (kind) {
+      case MeasurementKind.cyclingPower:
+        final r = SensorDecoders.cyclingPower(bytes);
+        return r == null ? null : cyclingPower(r, now);
+      case MeasurementKind.heartRate:
+        final r = SensorDecoders.heartRate(bytes);
+        return r == null ? null : heartRate(r);
+      case MeasurementKind.speedCadence:
+        final r = SensorDecoders.speedCadence(bytes);
+        return r == null ? null : speedCadence(r, now);
+      case MeasurementKind.indoorBike:
+        final r = SensorDecoders.indoorBike(bytes);
+        return r == null ? null : indoorBike(r);
+    }
+  }
 }
 
 /// Which measurement characteristic a [SensorSample] came from.

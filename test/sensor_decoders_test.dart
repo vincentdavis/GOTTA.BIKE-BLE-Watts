@@ -88,11 +88,15 @@ void main() {
     });
 
     test('ignores trailing bytes', () {
-      final bytes = [...CpmCodec.encode(
-        powerWatts: 1,
-        cumulativeCrankRevs: 2,
-        lastCrankEventTime: 3,
-      ), 0xFF, 0xFF];
+      final bytes = [
+        ...CpmCodec.encode(
+          powerWatts: 1,
+          cumulativeCrankRevs: 2,
+          lastCrankEventTime: 3,
+        ),
+        0xFF,
+        0xFF,
+      ];
       expect(SensorDecoders.cyclingPower(bytes)!.powerWatts, 1);
     });
 
@@ -177,7 +181,7 @@ void main() {
 
     test('all fields in order', () {
       final bytes = le([
-        (0x1FFE, 2), // bits 1..12, bit 0 set → no instantaneous speed
+        (0x1FFF, 2), // bits 0..12: bit 0 set → no instantaneous speed
         (2500, 2), // avg speed
         (170, 2), // cadence 85
         (160, 2), // avg cadence 80
@@ -263,11 +267,8 @@ void main() {
       for (var i = 0; i < 400; i++) {
         sim.advance(87, 0.5);
         now += 0.5;
-        rpm = t.update(
-              sim.cumulativeCrankRevs,
-              sim.lastCrankEventTime,
-              at(now),
-            ) *
+        rpm =
+            t.update(sim.cumulativeCrankRevs, sim.lastCrankEventTime, at(now)) *
             60;
       }
       expect(rpm, closeAs(87, 1.5)); // integer event-time truncation
@@ -320,7 +321,9 @@ void main() {
     test('FTMS and HR pass values through', () {
       final m = MeasurementInterpreter();
       final f = m.indoorBike(
-        SensorDecoders.indoorBike(le([(0x0044, 2), (3000, 2), (180, 2), (250, 2)]))!,
+        SensorDecoders.indoorBike(
+          le([(0x0044, 2), (3000, 2), (180, 2), (250, 2)]),
+        )!,
       );
       expect(f.kind, MeasurementKind.indoorBike);
       expect(f.powerWatts, 250);

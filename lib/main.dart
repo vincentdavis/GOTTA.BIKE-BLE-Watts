@@ -6,6 +6,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'cps_peripheral.dart';
 import 'device_identity.dart';
+import 'dual_record_page.dart';
 import 'power_profile.dart';
 import 'presets.dart';
 import 'profile_picker.dart';
@@ -446,6 +447,16 @@ class _EmulatorPageState extends State<EmulatorPage> {
     );
   }
 
+  /// Opens Dual record (only while not advertising).
+  Future<void> _openDualRecord() {
+    return Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            DualRecordPage(wheelCircumferenceM: _sensors.wheelCircumferenceM),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _notifyTimer?.cancel();
@@ -480,6 +491,14 @@ class _EmulatorPageState extends State<EmulatorPage> {
       appBar: AppBar(
         title: const Text('GOTTA.BIKE: BLE Watts'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.compare_arrows),
+            // The phone is either a sensor (advertising) or a central.
+            tooltip: _advertising
+                ? 'Dual record (stop advertising first)'
+                : 'Dual record',
+            onPressed: _advertising ? null : _openDualRecord,
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: 'Settings',

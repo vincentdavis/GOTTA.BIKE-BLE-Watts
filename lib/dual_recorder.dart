@@ -47,12 +47,22 @@ class SlotStats {
     required this.powerSamples,
     this.averagePowerWatts,
     this.averageCadenceRpm,
+    this.powerSource,
   });
 
   final int samples;
+
+  /// Where [averagePowerWatts] comes from (see [DualRecorder.stats]).
+  final MeasurementKind? powerSource;
   final int powerSamples;
   final double? averagePowerWatts;
   final double? averageCadenceRpm;
+}
+
+/// Running sums for one measurement kind of one slot.
+class _Acc {
+  int powerN = 0, cadenceN = 0;
+  double powerSum = 0, cadenceSum = 0;
 }
 
 /// Average power of A and B and how far B is from A.
@@ -76,6 +86,12 @@ class DualRecorder {
   static const int maxSamples = 400000;
 
   final List<RecordedSample> _samples = [];
+  final Map<RecordSlot, int> _counts = {
+    for (final s in RecordSlot.values) s: 0,
+  };
+  final Map<RecordSlot, Map<MeasurementKind, _Acc>> _acc = {
+    for (final s in RecordSlot.values) s: {},
+  };
   DateTime? _startedAt;
   DateTime? _stoppedAt;
   bool _recording = false;
@@ -92,6 +108,10 @@ class DualRecorder {
   /// Starts a new recording, discarding the previous one.
   void start(DateTime now) {
     _samples.clear();
+    for (final slot in RecordSlot.values) {
+      _counts[slot] = 0;
+      _acc[slot]!.clear();
+    }
     _startedAt = now;
     _stoppedAt = null;
     _recording = true;
@@ -107,6 +127,18 @@ class DualRecorder {
   bool add(RecordedSample s) {
     if (!_recording || full) return false;
     _samples.add(s);
+    _counts[s.slot] = _counts[s.slot]! + 1;
+    final acc = _acc[s.slot]!.putIfAbsent(s.sample.kind, _Acc.new);
+    final p = s.sample.powerWatts;
+    if (p != null) {
+      acc.powerN++;
+      acc.powerSum += p;
+    }
+    final c = s.sample.cadenceRpm;
+    if (c != null) {
+      acc.cadenceN++;
+      acc.cadenceSum += c;
+    }
     return true;
   }
 
@@ -119,33 +151,43 @@ class DualRecorder {
     return d.isNegative ? Duration.zero : d;
   }
 
-  int count(RecordSlot slot) => _samples.where((s) => s.slot == slot).length;
+  int count(RecordSlot slot) => _counts[slot]!;
 
-  /// Sample-weighted averages over the samples that carry the field.
+  /// Per-slot averages over the samples that carry the field, weighted by
+  /// sample. A device exposing several services (e.g. a trainer with Cycling
+  /// Power and FTMS) reports power twice, so each figure comes from one
+  /// source only: power from Cycling Power, else FTMS; cadence from Cycling
+  /// Power, else FTMS, else Speed & Cadence.
   SlotStats stats(RecordSlot slot) {
-    var n = 0, powerN = 0, cadenceN = 0;
-    var powerSum = 0.0, cadenceSum = 0.0;
-    for (final s in _samples) {
-      if (s.slot != slot) continue;
-      n++;
-      final p = s.sample.powerWatts;
-      if (p != null) {
-        powerN++;
-        powerSum += p;
+    final accs = _acc[slot]!;
+    _Acc? pick(List<MeasurementKind> order, int Function(_Acc) n) {
+      for (final k in order) {
+        final a = accs[k];
+        if (a != null && n(a) > 0) return a;
       }
-      final c = s.sample.cadenceRpm;
-      if (c != null) {
-        cadenceN++;
-        cadenceSum += c;
-      }
+      return null;
     }
+
+    final p = pick(const [
+      MeasurementKind.cyclingPower,
+      MeasurementKind.indoorBike,
+    ], (a) => a.powerN);
+    final c = pick(const [
+      MeasurementKind.cyclingPower,
+      MeasurementKind.indoorBike,
+      MeasurementKind.speedCadence,
+    ], (a) => a.cadenceN);
     return SlotStats(
-      samples: n,
-      powerSamples: powerN,
-      averagePowerWatts: powerN == 0 ? null : powerSum / powerN,
-      averageCadenceRpm: cadenceN == 0 ? null : cadenceSum / cadenceN,
+      samples: count(slot),
+      powerSamples: p?.powerN ?? 0,
+      averagePowerWatts: p == null ? null : p.powerSum / p.powerN,
+      averageCadenceRpm: c == null ? null : c.cadenceSum / c.cadenceN,
+      powerSource: p == null ? null : _kindOf(accs, p),
     );
   }
+
+  static MeasurementKind _kindOf(Map<MeasurementKind, _Acc> m, _Acc a) =>
+      m.entries.firstWhere((e) => identical(e.value, a)).key;
 
   PowerComparison comparison() =>
       PowerComparison(a: stats(RecordSlot.a), b: stats(RecordSlot.b));
@@ -189,7 +231,8 @@ class DualRecorder {
     final start = _startedAt ?? s.time;
     final elapsedMs = s.time.difference(start).inMicroseconds / 1000.0;
     String opt(Object? v) => v?.toString() ?? '';
-    String dec(double? v, int digits) => v == null ? '' : v.toStringAsFixed(digits);
+    String dec(double? v, int digits) =>
+        v == null ? '' : v.toStringAsFixed(digits);
     return [
       s.time.toUtc().toIso8601String(),
       (elapsedMs / 1000.0).toStringAsFixed(3),

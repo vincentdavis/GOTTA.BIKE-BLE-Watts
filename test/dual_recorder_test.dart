@@ -34,7 +34,10 @@ void main() {
     r.stop(t0.add(const Duration(seconds: 5)));
     expect(r.add(sample(RecordSlot.a, 6, power: 100)), isFalse);
     expect(r.count(RecordSlot.a), 1);
-    expect(r.elapsed(t0.add(const Duration(hours: 1))), const Duration(seconds: 5));
+    expect(
+      r.elapsed(t0.add(const Duration(hours: 1))),
+      const Duration(seconds: 5),
+    );
   });
 
   test('start discards the previous recording', () {
@@ -104,6 +107,30 @@ void main() {
     expect(cell('crank_revs'), '3');
     expect(cell('raw_hex'), '2000fa');
     expect(lines[1], contains('"Quarq, ""left"""'));
+  });
+
+  test('power prefers Cycling Power over FTMS from the same device', () {
+    final r = DualRecorder()..start(t0);
+    RecordedSample ftms(double sec, int power) => RecordedSample(
+      time: t0.add(Duration(milliseconds: (sec * 1000).round())),
+      slot: RecordSlot.b,
+      deviceId: 'BB:02',
+      deviceName: 'Trainer',
+      sample: SensorSample(
+        kind: MeasurementKind.indoorBike,
+        powerWatts: power,
+        cadenceRpm: 80,
+      ),
+    );
+    r.add(ftms(0, 300));
+    expect(r.stats(RecordSlot.b).averagePowerWatts, 300);
+    expect(r.stats(RecordSlot.b).powerSource, MeasurementKind.indoorBike);
+    r.add(sample(RecordSlot.b, 1, power: 200, cadence: 90));
+    final b = r.stats(RecordSlot.b);
+    expect(b.samples, 2);
+    expect(b.averagePowerWatts, 200);
+    expect(b.averageCadenceRpm, 90);
+    expect(b.powerSource, MeasurementKind.cyclingPower);
   });
 
   test('file name uses the start time', () {
