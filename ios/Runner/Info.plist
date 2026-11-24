@@ -29,9 +29,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Uses Bluetooth to act as a cycling sensor (power, cadence, heart rate, speed) so cycling apps and bike computers can connect to it and receive the values you set.</string>
+	<string>Uses Bluetooth to act as a cycling sensor (power, cadence, heart rate, speed) that cycling apps and bike computers can connect to, and to connect to your own Bluetooth sensors to record their data.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>Uses Bluetooth to act as a cycling sensor (power, cadence, heart rate, speed) so cycling apps and bike computers can connect to it and receive the values you set.</string>
+	<string>Uses Bluetooth to act as a cycling sensor (power, cadence, heart rate, speed) that cycling apps and bike computers can connect to, and to connect to your own Bluetooth sensors to record their data.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
