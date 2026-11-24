@@ -192,11 +192,17 @@ sensor (Settings › Sensors; at least one service is always on). It is a
   notifications for the main engine.
 - Play Console: the `connectedDevice` foreground service needs the
   foreground-service declaration (App content) before release.
-- iOS deployment target must be >= 13.1 (`universal_ble` is resolved via Swift
-  Package Manager and requires it). This project pins 14.0 in
-  `ios/Runner.xcodeproj/project.pbxproj`. Re-running `flutter create` resets it
-  to 13.0 and breaks the iOS build with a "minimum platform version" error —
-  bump it back to 14.0.
+- iOS deployment target is 15.0 in `ios/Runner.xcodeproj/project.pbxproj`
+  (Xcode 27 supports 15.0+; `universal_ble` via Swift Package Manager needs
+  >= 13.1). Re-running `flutter create` resets it to 13.0 and breaks the iOS
+  build — bump it back to 15.0.
+- iOS bundle ID is `ble.watts.bike.gotta` (Android's applicationId is
+  `ble.make.bike.gotta`; they are independent). `ios/Runner/Info.plist` sets
+  `ITSAppUsesNonExemptEncryption = false` and has no background modes (iOS
+  only advertises service UUIDs in the foreground anyway).
+  `ios/Runner/PrivacyInfo.xcprivacy` (no tracking, no collected data,
+  UserDefaults reason CA92.1) is in the Runner target's resources; update it
+  if the app starts using other required-reason APIs or collecting data.
 
 ## Conventions
 - Keep the codecs (`cpm_codec.dart`, `hr_codec.dart`, `csc_codec.dart`) pure
