@@ -29,6 +29,12 @@ control. All values are simulated.
   editor. Built-ins:
   - **CdA · Crr · Mass estimation** (10 min, tarmac)
   - **Surface Crr (off-road)** (9 min, gravel or dirt)
+- **Dual record**: connect to two real sensors at once (power meters,
+  smart trainers over FTMS, heart-rate or speed/cadence sensors), see their
+  live power and cadence side by side, record both streams and compare
+  average power (B vs A, %). Recordings are saved on the phone as CSV (one
+  row per notification, with the raw bytes) and shared via the share sheet.
+  Record-only; available while not broadcasting.
 - Keeps the screen on while broadcasting. Optionally (Android), it also
   keeps broadcasting if the screen turns off or you switch apps, through a
   foreground service with a persistent notification and a Stop button.
@@ -101,13 +107,16 @@ regenerates them; see that script to swap in the real GOTTA.BIKE artwork.
   the screen turns off or you switch apps.
 - iOS advertises standard service UUIDs only while the app is in the
   foreground.
+- Dual record needs real sensors and a physical phone. Wake sensors up
+  (turn the cranks) so they advertise. Keep the app open while recording.
 
 More architecture and protocol details are in [`CLAUDE.md`](CLAUDE.md).
 
 ## Privacy
 
 No account, no ads, no analytics, and no network use in release builds.
-Presets, profiles and settings stay on the device. The advertised device name
+Presets, profiles, settings and Dual-record recordings stay on the device
+unless you share a recording. The advertised device name
 is broadcast openly over Bluetooth, so keep personal information out of it.
 Full policy: [`store/privacy-policy.md`](store/privacy-policy.md).
 

@@ -7,6 +7,12 @@ screen-off foreground service), its merged **release** manifest and
 `pubspec.lock`. Re-check them against the final build before you submit
 ([when to revisit](#when-to-revisit-these-answers)).
 
+**Dual record** (branch `claude/dual-record-02b40f`, 2026-11-24) reads
+real sensor data and adds `share_plus` and `path_provider`. Point 9 explains
+why the answer stays **No**. Before submitting a build with it, re-check the
+merged release manifest (no `INTERNET`; `share_plus` adds only a
+non-exported `FileProvider` and a broadcast receiver).
+
 ## Answers at a glance
 
 | Form step | Question | Answer |
@@ -114,6 +120,23 @@ Here is what the app does, checked in the code:
    device, set `android:allowBackup="false"` in the manifest (outside this
    track's scope), then update the privacy policy's backup paragraph.
 
+9. **Dual record reads real sensor data, on the device only.** It connects
+   as a BLE central to two sensors the user picks and reads their real
+   power, cadence, speed and heart rate (`lib/sensor_central.dart`,
+   `lib/dual_record_page.dart`). That is health and fitness information
+   about the user, but it is processed on the device: it is shown on screen
+   and saved as a CSV in app-private storage
+   (`lib/recording_files.dart`). Nothing sends it to us or to a third
+   party. The only way it leaves the device is the user tapping **Share
+   CSV** and choosing a destination in the system share sheet, which is the
+   "user-initiated action ... where the user reasonably expects the data to
+   be shared" exemption. Scan results (nearby device names and addresses)
+   are shown only while the picker is open and never stored or sent; the
+   chosen sensors' names and Bluetooth identifiers are written into the
+   user's own recording.
+   Recordings sit in the app's data directory, so Android Auto Backup may
+   include them (point 8).
+
 ## Data types, one by one
 
 Every row is **not collected, not shared**.
@@ -123,17 +146,17 @@ Every row is **not collected, not shared**.
 | Location | Approximate, Precise | Never read. `ACCESS_FINE_LOCATION` exists only for BLE on Android 11 and lower (point 5). |
 | Personal info | Name, Email, User IDs, Address, Phone, Race and ethnicity, Political or religious beliefs, Sexual orientation, Other | No accounts or forms. The BLE device name is an emulator label that stays on the device except in the user-initiated broadcast (point 4). |
 | Financial info | Payment info, Purchase history, Credit score, Other | No purchases or payments. |
-| Health and fitness | Health info, Fitness info | All emulated values are simulated and never sent to us (point 4). |
+| Health and fitness | Health info, Fitness info | Emulated values are simulated (point 4). Dual record reads real power, heart rate and similar values from the user's sensors, but only processes and stores them on the device; sharing a recording is user-initiated (point 9). |
 | Messages | Emails, SMS or MMS, In-app messages | None. |
 | Photos and videos | Photos, Videos | None. |
 | Audio files | Voice or sound recordings, Music files, Other | None. |
-| Files and docs | Files and docs | None. The profile editor saves profiles in app-private preferences and has no file import or export. Re-check if import/export is added. |
+| Files and docs | Files and docs | None collected. Dual-record CSVs are created and kept on the device; the user can export one through the share sheet (point 9). The profile editor has no file import or export. |
 | Calendar | Calendar events | None. |
 | Contacts | Contacts | None. |
 | App activity | App interactions, In-app search history, Installed apps, Other user-generated content, Other actions | No analytics. Presets and profiles stay on the device. |
 | Web browsing | Web browsing history | No web view or browser. |
 | App info and performance | Crash logs, Diagnostics, Other app performance data | No crash or diagnostics SDK (point 7). |
-| Device or other IDs | Device or other IDs | None read or sent. Connected-central IDs are used only in memory (point 6). |
+| Device or other IDs | Device or other IDs | None sent. Connected-central IDs are used only in memory (point 6). Dual record writes the chosen sensors' Bluetooth identifiers into the user's own on-device recording (point 9). |
 
 The categories come from the same Google help page. The data type names are
 shortened here and may be worded slightly differently in Play Console.
@@ -173,8 +196,9 @@ that:
 - adds analytics, crash reporting (for example Firebase Crashlytics), ads,
   attribution or any SDK that sends data off the device;
 - adds accounts or sign-in;
-- reads **real** sensor data (a real heart-rate strap, power meter, GPS) or
-  uploads ride files;
+- sends **real** sensor data off the device by itself (Dual record reads it
+  but keeps it on the device; see point 9), reads GPS, or uploads ride
+  files;
 - adds sharing or export that sends data to a third party without a
   user-initiated action.
 
