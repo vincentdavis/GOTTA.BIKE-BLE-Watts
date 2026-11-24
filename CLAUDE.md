@@ -7,13 +7,17 @@ and cadence to head units, Zwift, Garmin/Wahoo apps, and nRF Connect. It can
 also emulate a Heart Rate (`0x180D`) and a Cycling Speed and Cadence (`0x1816`)
 sensor (Settings › Sensors; at least one service is always on). It is a
 *sensor*, not a controllable trainer: no FTMS / ERG resistance control.
+**Dual record** (app-bar action) turns the phone into a BLE *central*
+instead: it connects to two real sensors, shows them side by side and
+records both to a CSV. Record-only, no rebroadcast (yet).
 
 ## Stack
 - Flutter (Dart >=3.1.3, Flutter >=3.3.0)
 - BLE: `universal_ble` ^2.0.4 — peripheral / GATT-server + advertising
-- `wakelock_plus` (keep screen on while advertising); `shared_preferences`
-  (persist presets, device identity, profiles, the sensor selection and the
-  screen-off setting)
+- `wakelock_plus` (keep screen on while advertising / dual recording);
+  `shared_preferences` (persist presets, device identity, profiles, the
+  sensor selection and the screen-off setting); `path_provider` +
+  `share_plus` (save Dual-record CSVs, share them)
 - Android only: a small native foreground service (Kotlin, no plugin) for
   the optional "keep broadcasting with screen off" mode.
 - Material 3, dark theme. No state-management package; plain `StatefulWidget`.
@@ -67,6 +71,28 @@ sensor (Settings › Sensors; at least one service is always on). It is a
   Dart) and `MainActivity.kt` (the channel, the Android 13+ notification
   permission request, and stopping the service when the activity finishes).
   The notification icon is `res/drawable/ic_stat_broadcast.xml`.
+- `lib/sensor_decoders.dart` — pure central-side decoders (no BLE imports):
+  `SensorDecoders` for `0x2A63` (walks every flag field, records
+  balance/torque/wheel/crank/energy, skips extreme/dead-spot fields),
+  `0x2A37`, `0x2A5B` and FTMS Indoor Bike Data `0x2AD2`; each returns null
+  on a short packet. `RevolutionRateTracker` turns revs/event-time deltas
+  into a rate; `MeasurementInterpreter` (one per device) turns packets into
+  flat `SensorSample`s with derived cadence/speed.
+- `lib/dual_recorder.dart` — pure `DualRecorder`: slots A/B, running
+  per-slot averages (`stats` picks ONE power source per slot: CPS, else
+  FTMS; cadence CPS > FTMS > CSC), B-vs-A difference and the CSV
+  (`csvHeader`; one row per notification, not resampled; `raw_hex`).
+- `lib/sensor_central.dart` — `universal_ble` central glue: `CentralUuids`,
+  `SensorScanner`, and `SensorLink` (one device: connect, discover,
+  subscribe to every supported measurement, re-connect with back-off until
+  `close`). It emits raw `SensorPacket`s only, so a future relay can reuse
+  it with `cps_peripheral.dart`.
+- `lib/recording_files.dart` — saves CSVs to app documents `recordings/`
+  and opens the share sheet (`share_plus`). Tests fake it.
+- `lib/dual_record_page.dart` — the Dual record screen: two slot cards,
+  scan sheet, live values, comparison card, record/stop/share. Opened only
+  while not advertising; leaving while recording asks, then stops and
+  saves.
 - `lib/device_identity.dart` — pure `DeviceIdentity` (advertised name +
   Manufacturer/Model for the DIS) + `DeviceIdentityStore` (`shared_preferences`),
   plus the advertisement name budget (`advertisedNameBudget`,
@@ -129,6 +155,17 @@ sensor (Settings › Sensors; at least one service is always on). It is a
   crank event time, all times in 1/1024 s (CPS wheel data would use 1/2048 s).
   CSC Feature (`0x2A5C`) = `0x0003`. Its crank bytes must equal the CPM crank
   bytes for the same tick (one shared `CrankSimulator`).
+- Central side (Dual record): decoders mirror the encoders' layouts and must
+  ignore trailing bytes and return null (not throw) on truncated packets.
+  Cadence/speed come from deltas with masking (16-bit crank revs/time,
+  32-bit wheel revs, 16-bit wheel time); CPS wheel time is 1/2048 s, CSC
+  1/1024 s. A repeated (revs, time) pair holds the last rate for 3 s, then
+  0; a gap longer than one event-time wrap re-baselines. FTMS Indoor Bike
+  Data bit 0 is inverted (speed present when CLEAR) and sends cadence
+  directly (0.5 rpm).
+- Advertising and Dual record never run at the same time (the app-bar
+  action is disabled while advertising, and the screen covers the Start
+  button), so the phone is never peripheral and central at once.
 - Legacy advertising is 31 bytes: flags (3) + 16-bit UUID list (2 + 2 per
   service) + local name (2 + UTF-8 bytes). So the name fits 22 / 20 / 18 bytes
   with 1 / 2 / 3 services; `fitAdvertisedName` cuts it at a character
@@ -185,6 +222,14 @@ sensor (Settings › Sensors; at least one service is always on). It is a
   Home. Swiping the app away or
   finishing the activity stops the service (the broadcast lives in the
   activity's engine). Still to verify on a physical phone with Zwift.
+- Dual record keeps the screen on while a sensor is connected or a recording
+  runs, but has no screen-off mode: keep the app in front. Real sensors
+  need the physical phone; the iOS Simulator has no Bluetooth.
+- `universal_ble` gotchas seen in tests: its `UniversalBleStreamController`
+  closes when the last listener cancels (get a fresh stream after
+  cancelling); its commands go through a global queue; `disconnect` waits up
+  to its timeout for an event (pass a short one). In widget tests BLE events
+  land in microtasks after the pumped frame: pump twice.
 - Do not replace the native service with `flutter_foreground_task` or any
   plugin that starts a second FlutterEngine: every plugin attaches to that
   engine too, and when it is destroyed `universal_ble` clears its
@@ -213,3 +258,5 @@ sensor (Settings › Sensors; at least one service is always on). It is a
   codec module + thin `universal_ble` glue in `cps_peripheral.dart`.
 - `test/cps_peripheral_test.dart` drives the glue through a fake
   `UniversalBlePeripheralPlatform` (`UniversalBlePeripheral.setInstance`).
+- Central tests use `test/fake_central_platform.dart`
+  (`UniversalBle.setInstance`): push scan results, drops and notifications.

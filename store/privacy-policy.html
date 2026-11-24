@@ -135,6 +135,8 @@
       <li>When you tap <strong>Start</strong>, the app broadcasts <strong>simulated</strong> sensor data over
         Bluetooth Low Energy (BLE) to nearby devices. Anyone nearby can see that broadcast, so
         <strong>keep personal information out of the device name</strong>.</li>
+      <li><strong>Dual record</strong> (optional) connects to Bluetooth sensors you choose and can save their
+        readings in a file <strong>on your device</strong>. A recording leaves your phone only if you share it.</li>
     </ul>
   </section>
 
@@ -142,7 +144,11 @@
   <p>The app makes your phone act as a standard Bluetooth LE cycling sensor so you can test cycling apps,
   bike computers and indoor-training setups. All values it sends (power, cadence, heart rate, speed) are
   simulated: they are numbers you choose or a scripted test profile produces.
-  <strong>The app does not measure anything about you.</strong></p>
+  <strong>The emulator does not measure anything about you.</strong></p>
+  <p><strong>Dual record</strong> is different: it connects to two Bluetooth sensors that you pick (for
+  example two power meters, or a power meter and a smart trainer) and reads their real measurements, such
+  as power, cadence, speed and heart rate, so you can compare them. The readings are shown on screen and,
+  if you record, saved on your phone. Dual record doesn&rsquo;t broadcast anything.</p>
 
   <h2 id="information-we-collect">Information we collect</h2>
   <p><strong>None.</strong> The app doesn&rsquo;t send any information to us or to any third party. We have no
@@ -157,12 +163,18 @@
     <li><strong>Test profiles:</strong> custom power profiles you create in the profile editor, and which profile is selected.</li>
     <li><strong>Sensor and app settings:</strong> settings for the emulated sensors, such as which sensors are
       on and their values, and app preferences such as the screen-off broadcasting option.</li>
+    <li><strong>Dual-record recordings:</strong> when you stop a recording, the app saves a CSV file with the
+      readings of the two sensors (time, power, cadence, speed, heart rate and the other values the sensors
+      send), plus each sensor&rsquo;s name and Bluetooth identifier. The file leaves your phone only if you tap
+      <strong>Share CSV</strong> and pick an app or place to send it to; what happens then is governed by that
+      app&rsquo;s or service&rsquo;s own privacy policy.</li>
   </ul>
   <p>Other apps can&rsquo;t read this data (Android keeps each app&rsquo;s private storage separate), and we
-  never receive it. You can change or delete presets and profiles in the app. To delete everything, use
-  Android&rsquo;s <strong>Clear storage</strong> option for the app, or uninstall it.</p>
+  never receive it. You can change or delete presets and profiles in the app. The app has no button to
+  delete recordings yet. To delete everything, including recordings, use Android&rsquo;s
+  <strong>Clear storage</strong> option for the app, or uninstall it.</p>
   <p><strong>Android backup.</strong> If Android backup is turned on for your Google account, Android may
-  include these settings in your device backup so they can be restored on a new phone. Google stores these
+  include these settings and recordings in your device backup so they can be restored on a new phone. Google stores these
   backups in your Google account. On Android 9 and newer they are end-to-end encrypted with your screen
   lock PIN, pattern or password. We can&rsquo;t access them. You control backup in your phone&rsquo;s
   settings.</p>
@@ -190,6 +202,18 @@
   <p>What a connected app or device does with the values it receives is governed by that app&rsquo;s or
   device&rsquo;s own privacy policy.</p>
 
+  <h2 id="dual-record">Bluetooth: Dual record</h2>
+  <ul>
+    <li>The app <strong>scans</strong> for nearby Bluetooth devices only while the device picker is open, and
+      lists those that offer cycling power, heart rate, speed and cadence or fitness-machine services. The
+      list isn&rsquo;t stored.</li>
+    <li>It <strong>connects</strong> only to the devices you pick and subscribes to their measurements. It
+      reconnects if a link drops, until you disconnect or leave the screen.</li>
+    <li>It keeps the screen on while a sensor is connected or a recording runs.</li>
+    <li>Nothing is sent to the sensors except the standard Bluetooth requests needed to connect and
+      subscribe.</li>
+  </ul>
+
   <h2 id="permissions">Permissions the app uses</h2>
   <div class="table-wrap">
     <table>
@@ -205,14 +229,14 @@
         <tr>
           <td data-label="Permission"><code>BLUETOOTH_<wbr>CONNECT</code> (Nearby devices)</td>
           <td data-label="Android versions">12 and newer</td>
-          <td data-label="Why the app needs it">To accept connections from apps and devices, send them sensor data, and apply the advertised device name.</td>
+          <td data-label="Why the app needs it">To accept connections from apps and devices, send them sensor data, and apply the advertised device name. In Dual record, to connect to the sensors you pick.</td>
         </tr>
         <tr>
           <td data-label="Permission"><code>BLUETOOTH_<wbr>SCAN</code> (Nearby devices)</td>
           <td data-label="Android versions">12 and newer</td>
-          <td data-label="Why the app needs it">Required by the Bluetooth library the app uses. It is declared with the <code>neverForLocation</code>
-            flag: the app never uses Bluetooth to work out your location, and it doesn&rsquo;t scan for or record
-            nearby devices.</td>
+          <td data-label="Why the app needs it">To find nearby sensors while the Dual record device picker is open. It is declared with the
+            <code>neverForLocation</code> flag: the app never uses Bluetooth to work out your location, and it
+            doesn&rsquo;t store the list of devices it finds.</td>
         </tr>
         <tr>
           <td data-label="Permission"><code>BLUETOOTH</code>, <code>BLUETOOTH_<wbr>ADMIN</code></td>
@@ -224,7 +248,8 @@
           <td data-label="Android versions">11 and older only</td>
           <td data-label="Why the app needs it">On Android 11 and older, Android ties Bluetooth LE to the location permission, and the Bluetooth
             library the app uses requires it on those versions. The app <strong>never reads, stores or shares your
-            location</strong>. On Android 12 and newer the app doesn&rsquo;t request location at all.</td>
+            location</strong>. On those versions Dual record may also need the phone&rsquo;s Location setting switched on
+            to find sensors. On Android 12 and newer the app doesn&rsquo;t request location at all.</td>
         </tr>
         <tr>
           <td data-label="Permission"><code>FOREGROUND_<wbr>SERVICE</code>, <code>FOREGROUND_<wbr>SERVICE_<wbr>CONNECTED_<wbr>DEVICE</code></td>
@@ -270,18 +295,20 @@
   information from anyone, including children.</p>
 
   <h2 id="security">Security</h2>
-  <p>Your settings stay in the app&rsquo;s private storage, which Android&rsquo;s app sandbox protects. The
+  <p>Your settings and recordings stay in the app&rsquo;s private storage, which Android&rsquo;s app sandbox protects. The
   app doesn&rsquo;t transmit your data over the internet. Bluetooth broadcasts are unencrypted by design (see
   above), so don&rsquo;t put anything sensitive into the fields that the app broadcasts.</p>
 
   <h2 id="retention">Data retention and deletion</h2>
-  <p>We don&rsquo;t hold any of your data, so there is nothing for us to keep or delete. Settings stored on
-  your phone stay there until you change them, clear the app&rsquo;s storage or uninstall the app.</p>
+  <p>We don&rsquo;t hold any of your data, so there is nothing for us to keep or delete. Settings and
+  recordings stored on your phone stay there until you change them, clear the app&rsquo;s storage or
+  uninstall the app. Copies of recordings you shared are kept wherever you sent them.</p>
 
   <h2 id="choices">Your choices</h2>
   <ul>
     <li>You can deny or revoke the Nearby devices, Location or Notifications permissions at any time in
-      Android settings. Without them the app can&rsquo;t broadcast, or can&rsquo;t show its notification.</li>
+      Android settings. Without them the app can&rsquo;t broadcast or connect to sensors, or can&rsquo;t show its
+      notification.</li>
     <li>You can stop broadcasting at any time with the Stop button.</li>
     <li>You can turn Android backup on or off in your phone&rsquo;s settings.</li>
   </ul>

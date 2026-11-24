@@ -206,6 +206,14 @@ Reasons for Tools:
    a "power and heart-rate generator" in front of people looking for workout
    apps, which is exactly the audience the responsible-use note warns about.
 
+**Re-check with Dual record (2026-11-24).** Dual record reads real power,
+cadence, speed and heart rate from two sensors and records them to a CSV on
+the device, to compare the sensors. That is an equipment-comparison tool,
+not activity tracking, so points 1 and 2 most likely still hold. But it does
+"record" real readings, so confirm the Health apps declaration answer (and
+whether to mention Dual record in the descriptions above) before releasing
+a version that includes it.
+
 Trade-off: Health and Fitness might get more organic discovery from
 cyclists. If you want that audience, reach it through tags and the
 description keywords, not the category.
