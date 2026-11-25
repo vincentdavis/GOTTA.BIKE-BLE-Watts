@@ -69,13 +69,13 @@ cp android/key.properties.example android/key.properties
 
 ## 4. Version
 
-- [ ] **Releases made with `tool/release.sh`** take their version from the
-      command (`tool/release.sh 1.0.1` → versionName `1.0.1`, versionCode
-      `1000001`), so there is nothing to bump: just use a higher version each
-      time.
-- [ ] **Local builds**: bump `version:` in `pubspec.yaml`. The part after `+`
-      is the Android `versionCode` and must increase with **every** upload
-      (for example `1.0.0+1` → `1.0.1+2`).
+- [ ] Set `version:` in `pubspec.yaml` to `X.Y.Z+N`, where
+      N = X × 1,000,000 + Y × 1,000 + Z (for example `1.2.1+1002001`), commit
+      and push it. Android uses N as the `versionCode` and iOS as the build
+      number, so both platforms carry the same version, and N must increase
+      with **every** upload.
+- [ ] `tool/release.sh 1.2.1` refuses to run unless `pubspec.yaml` says
+      exactly `1.2.1+1002001`.
 
 ## 5. Build the App Bundle
 
@@ -229,8 +229,9 @@ tool/release.sh 1.0.0
 The dry run checks, tests and builds without tagging or uploading. The real
 run then:
 
-1. Refuses to continue if the tree is dirty, `main` isn't pushed, the version
-   isn't higher than the last release, or the key file is missing.
+1. Refuses to continue if the tree is dirty, `main` isn't pushed,
+   `pubspec.yaml` doesn't say the same version, the version isn't higher
+   than the last release, or the key file is missing.
 2. Runs the formatter check, analyzer and tests.
 3. Builds the APK and App Bundle as version `1.0.0` (versionCode `1000000`)
    and checks both are signed with the upload key, not the debug key.

@@ -206,8 +206,10 @@ records both to a CSV. Record-only, no rebroadcast (yet).
   analyze, test, APK build, analysis self-test; pins `FLUTTER_VERSION`, keep
   it in step with local Flutter). Releases are built LOCALLY, never on
   GitHub, so the upload key stays on this Mac: `tool/release.sh X.Y.Z
-  [--dry-run]` (bash 3.2) checks a clean, pushed `main` and a higher
-  version, runs format/analyze/test, builds APK + AAB with versionCode =
+  [--dry-run]` (bash 3.2) checks a clean, pushed `main`, a higher
+  version and that `pubspec.yaml` says `X.Y.Z+<versionCode>` (iOS reads
+  it, so both platforms match), runs format/analyze/test, builds APK +
+  AAB with versionCode =
   X*1e6 + Y*1e3 + Z, refuses debug signing, then tags `vX.Y.Z`, pushes the
   tag and runs `gh release create` with APK + AAB + SHA256SUMS. Don't add a
   tag-triggered release workflow (the script refuses to run if

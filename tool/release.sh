@@ -12,6 +12,8 @@
 # never leaves this machine. The version comes from the argument: 1.2.3
 # builds versionName 1.2.3 and versionCode 1002003 (major * 1,000,000 +
 # minor * 1,000 + patch), and it must be higher than every earlier release.
+# `version:` in pubspec.yaml must already say 1.2.3+1002003 (committed), so
+# iOS builds, which read it, carry the same version as Android.
 #
 # Needs Flutter, the GitHub CLI (`gh auth login`), and a clean `main` that
 # matches origin/main. Written for the bash 3.2 that ships with macOS.
@@ -24,7 +26,7 @@ version="" dry_run=false
 for arg in "$@"; do
   case "$arg" in
     --dry-run) dry_run=true ;;
-    -h | --help) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h | --help) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*) die "unknown option: $arg" ;;
     *) [ -z "$version" ] || die "unexpected argument: $arg"; version="${arg#v}" ;;
   esac
@@ -55,6 +57,9 @@ step "Checking $tag (versionCode $code)"
 git fetch --quiet --tags origin || problem "couldn't fetch from origin."
 [ "$(git rev-parse HEAD)" = "$(git rev-parse -q --verify origin/main || true)" ] ||
   problem "main doesn't match origin/main; push or pull first."
+pubspec_version=$(sed -n 's/^version:[[:space:]]*//p' pubspec.yaml | tr -d '[:space:]')
+[ "$pubspec_version" = "$version+$code" ] ||
+  problem "pubspec.yaml says version $pubspec_version; set it to $version+$code and commit, so iOS builds match."
 if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
   problem "tag $tag already exists."
 fi
