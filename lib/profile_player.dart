@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'power_profile.dart';
@@ -16,8 +18,14 @@ String formatClock(num seconds) {
 String segmentTitle(ProfileSegment segment, int index) =>
     segment.label.trim().isEmpty ? 'Segment ${index + 1}' : segment.label;
 
-/// "9:00 · 8 segments": a profile's duration and segment count.
+/// "9:00 · 8 segments": a profile's duration and segment count; for a
+/// recorded ride, "1:02:10 · recorded ride · avg 212 W".
 String profileStats(PowerProfile profile) {
+  final track = profile.track;
+  if (track != null) {
+    return '${formatClock(profile.totalSec)} · recorded ride · '
+        'avg ${track.averagePower} W';
+  }
   final n = profile.segments.length;
   return '${formatClock(profile.totalSec)} · $n segment${n == 1 ? '' : 's'}';
 }
@@ -56,8 +64,10 @@ class ProfilePlayerView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final total = profile.totalSec;
-    final hasSegments = profile.segments.isNotEmpty;
-    final activeIndex = running && hasSegments
+    final playable = total > 0;
+    final recorded = profile.isRecorded;
+    final showProgress = running && playable;
+    final activeIndex = showProgress && !recorded
         ? profile.activeIndexAt(elapsedSec)
         : -1;
 
@@ -89,7 +99,7 @@ class ProfilePlayerView extends StatelessWidget {
                   profile: profile,
                   elapsedSec: running ? elapsedSec : null,
                 ),
-                if (activeIndex >= 0) ...[
+                if (showProgress) ...[
                   const SizedBox(height: 12),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
@@ -112,8 +122,11 @@ class ProfilePlayerView extends StatelessWidget {
                       ),
                       Flexible(
                         child: Text(
-                          'Step ${activeIndex + 1}/${profile.segments.length} · '
-                          '${segmentTitle(profile.segments[activeIndex], activeIndex)}',
+                          recorded
+                              ? 'Recorded ride · '
+                                    '${profile.sampleAt(elapsedSec).power} W'
+                              : 'Step ${activeIndex + 1}/${profile.segments.length} · '
+                                    '${segmentTitle(profile.segments[activeIndex], activeIndex)}',
                           style: theme.textTheme.bodySmall,
                           textAlign: TextAlign.right,
                         ),
@@ -138,7 +151,7 @@ class ProfilePlayerView extends StatelessWidget {
           )
         else
           FilledButton.icon(
-            onPressed: canRun && hasSegments ? onRun : null,
+            onPressed: canRun && playable ? onRun : null,
             icon: const Icon(Icons.play_arrow),
             label: const Text('Run profile'),
             style: FilledButton.styleFrom(
@@ -153,9 +166,11 @@ class ProfilePlayerView extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
         ],
-        const SizedBox(height: 16),
-        Text('Segments', style: theme.textTheme.bodySmall),
-        const SizedBox(height: 4),
+        if (profile.segments.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Text('Segments', style: theme.textTheme.bodySmall),
+          const SizedBox(height: 4),
+        ],
         for (var i = 0; i < profile.segments.length; i++)
           _SegmentRow(
             index: i,
@@ -194,7 +209,11 @@ class _SelectedProfileCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      profile.builtIn ? 'Built-in profile' : 'My profile',
+                      profile.builtIn
+                          ? 'Built-in profile'
+                          : profile.isRecorded
+                          ? 'Recorded ride'
+                          : 'My profile',
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: scheme.onSurfaceVariant,
                       ),
@@ -352,7 +371,8 @@ class _ProfilePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final total = profile.totalSec;
-    if (total <= 0 || profile.segments.isEmpty) return;
+    final track = profile.track;
+    if (total <= 0 || (track == null && profile.segments.isEmpty)) return;
 
     final pad = showAxes
         ? const EdgeInsets.fromLTRB(36, 8, 8, 18)
@@ -399,12 +419,30 @@ class _ProfilePainter extends CustomPainter {
     }
 
     // Build the profile outline (holds = flat, ramps = sloped, steps at joins).
+    // A recorded ride is drawn as steps of its average power per pixel column.
     final pts = <Offset>[];
-    var t = 0.0;
-    for (final s in profile.segments) {
-      pts.add(Offset(xAt(t), yAt(s.startPower)));
-      t += s.durationSec;
-      pts.add(Offset(xAt(t), yAt(s.endPower)));
+    if (track != null) {
+      final n = track.durationSec;
+      final buckets = math.max(1, math.min(n, plot.width.round()));
+      for (var b = 0; b < buckets; b++) {
+        final from = b * n ~/ buckets;
+        final to = math.max(from + 1, (b + 1) * n ~/ buckets);
+        var sum = 0;
+        for (var i = from; i < to; i++) {
+          sum += track.power[i];
+        }
+        final y = yAt(sum / (to - from));
+        pts
+          ..add(Offset(xAt(from), y))
+          ..add(Offset(xAt(to), y));
+      }
+    } else {
+      var t = 0.0;
+      for (final s in profile.segments) {
+        pts.add(Offset(xAt(t), yAt(s.startPower)));
+        t += s.durationSec;
+        pts.add(Offset(xAt(t), yAt(s.endPower)));
+      }
     }
 
     Path areaTo(List<Offset> p) {

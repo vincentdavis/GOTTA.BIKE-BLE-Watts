@@ -7,10 +7,14 @@
 /// `cpm_codec.dart`).
 ///
 /// Profiles are either **built in** ([kBuiltInProfiles]: fixed ids, read-only)
-/// or **custom** (made by the user, persisted as JSON by `ProfileStore`).
+/// or **custom** (made by the user, persisted as JSON by `ProfileStore`). A
+/// custom profile is either a list of [ProfileSegment]s or a **recorded ride**:
+/// a per-second [PowerTrack], e.g. imported from a CSV file.
 library;
 
+import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'limits.dart';
 
@@ -25,6 +29,14 @@ const int kMaxProfileSec = 2 * 3600;
 
 /// Most segments one profile may have.
 const int kMaxProfileSegments = 100;
+
+/// Longest recorded ride ([PowerTrack]), in seconds (6 h).
+const int kMaxTrackSec = 6 * 3600;
+
+/// Highest power a recorded ride may hold. Above the manual / segment limit
+/// ([kPowerMax]) so real sprints replay unclipped; the Cycling Power packet's
+/// sint16 field goes far higher.
+const int kTrackPowerMax = 3000;
 
 /// Text length limits: enforced by the editor, clamped when loading JSON.
 const int kMaxProfileNameLength = 60;
@@ -193,7 +205,113 @@ class ProfileSegment {
       'ProfileSegment($label: ${durationSec}s, $powerLabel, $cadence rpm)';
 }
 
-/// A named sequence of [ProfileSegment]s played back over time.
+/// A recorded ride: power and cadence for each second, replayed as is (second
+/// `i` plays `power[i]` / `cadence[i]` for the whole second).
+class PowerTrack {
+  /// Values are rounded into range (power 0..[kTrackPowerMax], cadence
+  /// 0..[kCadenceMax]); [cadence] must be as long as [power].
+  PowerTrack({required List<int> power, required List<int> cadence})
+    : power = Uint16List.fromList([
+        for (final p in power) p.clamp(0, kTrackPowerMax).toInt(),
+      ]),
+      cadence = Uint8List.fromList([
+        for (final c in cadence) c.clamp(0, kCadenceMax).toInt(),
+      ]) {
+    if (power.length != cadence.length) {
+      throw ArgumentError('power and cadence must have the same length');
+    }
+  }
+
+  final Uint16List power;
+  final Uint8List cadence;
+
+  int get durationSec => power.length;
+
+  int get maxPower => power.isEmpty ? 0 : power.reduce(math.max);
+
+  /// Mean power over the whole ride, rounded.
+  int get averagePower => power.isEmpty
+      ? 0
+      : (power.fold<int>(0, (sum, p) => sum + p) / power.length).round();
+
+  /// The (power, cadence) at elapsed time [t] seconds, clamped to the ride.
+  ({int power, int cadence}) sampleAt(double t) {
+    if (power.isEmpty) return (power: 0, cadence: 0);
+    final i = t.isNaN ? 0 : t.floor().clamp(0, power.length - 1).toInt();
+    return (power: power[i], cadence: cadence[i]);
+  }
+
+  /// Human-readable problems; empty when valid.
+  List<String> validate() => [
+    if (power.isEmpty) 'The recorded ride is empty.',
+    if (power.length > kMaxTrackSec)
+      'The recorded ride is longer than the ${kMaxTrackSec ~/ 3600} h maximum.',
+  ];
+
+  /// Compact JSON: base64 of little-endian uint16 power and uint8 cadence (a
+  /// 6 h ride is about 90 KB).
+  Map<String, dynamic> toJson() {
+    final bytes = ByteData(power.length * 2);
+    for (var i = 0; i < power.length; i++) {
+      bytes.setUint16(i * 2, power[i], Endian.little);
+    }
+    return {
+      'power': base64Encode(bytes.buffer.asUint8List()),
+      'cadence': base64Encode(cadence),
+    };
+  }
+
+  /// Throws a [FormatException] when the data is unreadable.
+  factory PowerTrack.fromJson(Map<String, dynamic> json) {
+    final rawPower = json['power'];
+    final rawCadence = json['cadence'];
+    if (rawPower is! String || rawCadence is! String) {
+      throw const FormatException('Recorded ride data is missing.');
+    }
+    final Uint8List p;
+    final Uint8List c;
+    try {
+      p = base64Decode(rawPower);
+      c = base64Decode(rawCadence);
+    } on FormatException {
+      throw const FormatException('Recorded ride data is corrupt.');
+    }
+    if (p.length.isOdd || p.length ~/ 2 != c.length) {
+      throw const FormatException('Recorded ride data is corrupt.');
+    }
+    final view = ByteData.sublistView(p);
+    return PowerTrack(
+      power: [
+        for (var i = 0; i < c.length; i++) view.getUint16(i * 2, Endian.little),
+      ],
+      cadence: c,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! PowerTrack || other.power.length != power.length) {
+      return false;
+    }
+    for (var i = 0; i < power.length; i++) {
+      if (other.power[i] != power[i] || other.cadence[i] != cadence[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @override
+  int get hashCode => Object.hash(power.length, maxPower, averagePower);
+
+  @override
+  String toString() =>
+      'PowerTrack(${power.length}s, avg $averagePower W, max $maxPower W)';
+}
+
+/// A named test profile played back over time: a sequence of
+/// [ProfileSegment]s, or a recorded ride ([track]).
 class PowerProfile {
   const PowerProfile({
     required this.id,
@@ -201,6 +319,7 @@ class PowerProfile {
     required this.description,
     required this.segments,
     this.builtIn = false,
+    this.track,
   });
 
   /// Stable identity: fixed for built-ins, generated once for custom profiles
@@ -215,14 +334,23 @@ class PowerProfile {
   /// custom profile.
   final bool builtIn;
 
+  /// The recorded ride this profile replays; null for a segment profile.
+  /// A recorded profile has no [segments].
+  final PowerTrack? track;
+
   bool get isCustom => !builtIn;
 
-  int get totalSec => segments.fold(0, (sum, s) => sum + s.durationSec);
+  bool get isRecorded => track != null;
 
-  int get maxPower => segments.fold(
-    0,
-    (m, s) => math.max(m, math.max(s.startPower, s.endPower)),
-  );
+  int get totalSec =>
+      track?.durationSec ?? segments.fold(0, (sum, s) => sum + s.durationSec);
+
+  int get maxPower =>
+      track?.maxPower ??
+      segments.fold(
+        0,
+        (m, s) => math.max(m, math.max(s.startPower, s.endPower)),
+      );
 
   /// Start time (seconds) of segment [index].
   int startOf(int index) {
@@ -248,6 +376,8 @@ class PowerProfile {
   /// The (power, cadence) target at elapsed time [t] seconds, interpolating
   /// power within a ramp segment. Clamped to the profile's bounds.
   ({int power, int cadence}) sampleAt(double t) {
+    final track = this.track;
+    if (track != null) return track.sampleAt(t);
     if (segments.isEmpty) return (power: 0, cadence: 0);
     final clamped = t.clamp(0.0, totalSec.toDouble());
     var acc = 0.0;
@@ -273,12 +403,14 @@ class PowerProfile {
     String? description,
     List<ProfileSegment>? segments,
     bool? builtIn,
+    PowerTrack? track,
   }) => PowerProfile(
     id: id ?? this.id,
     name: name ?? this.name,
     description: description ?? this.description,
     segments: segments ?? this.segments,
     builtIn: builtIn ?? this.builtIn,
+    track: track ?? this.track,
   );
 
   /// An editable custom copy named "Copy of …" with the fresh [id].
@@ -287,12 +419,13 @@ class PowerProfile {
     name: clampTextLength('Copy of $name', kMaxProfileNameLength),
     description: description,
     segments: List.unmodifiable(segments),
+    track: track,
   );
 
   /// Human-readable reasons this profile can't be saved / played; empty when
-  /// it is valid. Rules: a non-blank name, 1..[kMaxProfileSegments] valid
-  /// segments (see [ProfileSegment.validate]) and a total of at most
-  /// [kMaxProfileSec].
+  /// it is valid. Rules: a non-blank name, then either a valid [track] and no
+  /// segments, or 1..[kMaxProfileSegments] valid segments (see
+  /// [ProfileSegment.validate]) totalling at most [kMaxProfileSec].
   List<String> validate() {
     final errors = <String>[];
     if (id.trim().isEmpty) errors.add('The profile has no id.');
@@ -304,6 +437,14 @@ class PowerProfile {
       errors.add(
         'Description is longer than $kMaxProfileDescriptionLength characters.',
       );
+    }
+    final track = this.track;
+    if (track != null) {
+      if (segments.isNotEmpty) {
+        errors.add('A recorded ride can’t also have segments.');
+      }
+      errors.addAll(track.validate());
+      return errors;
     }
     if (segments.isEmpty) errors.add('Add at least one segment.');
     if (segments.length > kMaxProfileSegments) {
@@ -336,27 +477,34 @@ class PowerProfile {
     'name': name,
     'description': description,
     'segments': [for (final s in segments) s.toJson()],
+    if (track != null) 'track': track!.toJson(),
   };
 
   /// Parses a stored custom profile. Scalar fields are clamped / defaulted like
   /// [ProfileSegment.fromJson] (a blank name becomes [kUntitledProfileName]);
-  /// throws a [FormatException] when the data can't be repaired: no id, or no
-  /// usable segments. The result is never [builtIn]. Segments beyond
-  /// [kMaxProfileSegments] are dropped.
+  /// throws a [FormatException] when the data can't be repaired: no id, an
+  /// unreadable recorded ride, or (without one) no usable segments. The result
+  /// is never [builtIn]. Segments beyond [kMaxProfileSegments] are dropped.
   factory PowerProfile.fromJson(Map<String, dynamic> json) {
     final id = json['id'];
     if (id is! String || id.trim().isEmpty) {
       throw const FormatException('Profile has no id.');
     }
-    final rawSegments = json['segments'];
+    final rawTrack = json['track'];
+    final track = rawTrack is Map<String, dynamic>
+        ? PowerTrack.fromJson(rawTrack)
+        : null;
+    final rawSegments = json['segments'] ?? const [];
     if (rawSegments is! List) {
       throw const FormatException('Profile has no segment list.');
     }
-    final segments = <ProfileSegment>[
-      for (final s in rawSegments)
-        if (s is Map<String, dynamic>) ProfileSegment.fromJson(s),
-    ];
-    if (segments.isEmpty) {
+    final segments = track != null
+        ? const <ProfileSegment>[]
+        : <ProfileSegment>[
+            for (final s in rawSegments)
+              if (s is Map<String, dynamic>) ProfileSegment.fromJson(s),
+          ];
+    if (track == null && segments.isEmpty) {
       throw const FormatException('Profile has no segments.');
     }
     final name = _jsonText(json['name'], kMaxProfileNameLength);
@@ -365,6 +513,7 @@ class PowerProfile {
       name: name.trim().isEmpty ? kUntitledProfileName : name,
       description: _jsonText(json['description'], kMaxProfileDescriptionLength),
       segments: List.unmodifiable(segments.take(kMaxProfileSegments)),
+      track: track,
     );
   }
 
@@ -376,6 +525,7 @@ class PowerProfile {
         other.name != name ||
         other.description != description ||
         other.builtIn != builtIn ||
+        other.track != track ||
         other.segments.length != segments.length) {
       return false;
     }
@@ -386,12 +536,20 @@ class PowerProfile {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, description, builtIn, Object.hashAll(segments));
+  int get hashCode => Object.hash(
+    id,
+    name,
+    description,
+    builtIn,
+    track,
+    Object.hashAll(segments),
+  );
 
   @override
   String toString() =>
-      'PowerProfile($id: $name, ${segments.length} segments, ${totalSec}s'
+      'PowerProfile($id: $name, '
+      '${track != null ? 'recorded' : '${segments.length} segments'}, '
+      '${totalSec}s'
       '${builtIn ? ', built-in' : ''})';
 }
 

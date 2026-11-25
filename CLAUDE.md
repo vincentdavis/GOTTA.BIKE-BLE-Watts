@@ -102,7 +102,11 @@ records both to a CSV. Record-only, no rebroadcast (yet).
   `presets.dart` (which pulls in `shared_preferences`).
 - `lib/power_profile.dart` — pure `PowerProfile` / `ProfileSegment` model
   (timed power/cadence segments, ramps, coasts; `sampleAt(t)`; stable ids;
-  built-in vs custom; JSON with clamping; `validate()`) + `kBuiltInProfiles`:
+  built-in vs custom; JSON with clamping; `validate()`). A custom profile can
+  instead be a **recorded ride**: `track` (`PowerTrack`, per-second power
+  0..`kTrackPowerMax` (3000 W, above the 800 W manual limit) + cadence, up to
+  `kMaxTrackSec` = 6 h, no segments, stored as base64 uint16/uint8 in the
+  profile JSON; second `i` plays `power[i]`). Plus `kBuiltInProfiles`:
   `kCdaCrrMassProfile` (tarmac) and `kSurfaceCrrProfile` (off-road Crr; its
   doc comment records the forward-model validation). Pure/testable like
   `cpm_codec.dart`.
@@ -110,7 +114,16 @@ records both to a CSV. Record-only, no rebroadcast (yet).
   profiles (max 20) and the selected profile id; corrupt data falls back to
   the built-ins.
 - `lib/profile_picker.dart` — the profile library bottom sheet: select,
-  duplicate, edit/delete custom profiles (with undo), new profile.
+  duplicate, edit/delete custom profiles (with undo; recorded rides have no
+  Edit), new profile, and "Import CSV ride" at the end of My profiles.
+- `lib/csv_power_import.dart` — pure `parseCsvPower`: detects delimiter and
+  header (time/power/cadence names, or no header = time, power, cadence),
+  parses seconds or `h:mm:ss`, filters a Dual record `slot`, averages rows
+  per second, interpolates gaps, clamps, and returns a `PowerTrack` plus
+  warnings. `lib/csv_import_dialog.dart` — `pickCsvFile` (`file_selector`,
+  no extra permissions, 50 MB cap) and the import dialog (name, stats,
+  device choice, cadence when the file has none); parsing runs in
+  `Isolate.run`, injectable for tests.
 - `lib/profile_editor_page.dart` — create/edit a custom profile: live chart,
   reorderable segments, segment dialog (ramp / coast toggles, clamped numeric
   fields), validation on save, discard confirmation.

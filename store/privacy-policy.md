@@ -66,8 +66,10 @@ so they are still there the next time you open it:
 - **Presets:** up to five named power and cadence levels.
 - **Device identity:** the advertised Bluetooth device name and the
   manufacturer and model strings.
-- **Test profiles:** custom power profiles you create in the profile editor,
-  and which profile is selected.
+- **Test profiles:** custom power profiles you create in the profile editor
+  or import from a CSV file you pick, and which profile is selected. The app
+  reads only the file you choose, and keeps just the time, power and cadence
+  values it needs.
 - **Sensor and app settings:** settings for the emulated sensors, such as
   which sensors are on and their values, and app preferences such as the
   screen-off broadcasting option.

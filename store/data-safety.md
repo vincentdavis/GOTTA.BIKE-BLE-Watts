@@ -150,7 +150,7 @@ Every row is **not collected, not shared**.
 | Messages | Emails, SMS or MMS, In-app messages | None. |
 | Photos and videos | Photos, Videos | None. |
 | Audio files | Voice or sound recordings, Music files, Other | None. |
-| Files and docs | Files and docs | None collected. Dual-record CSVs are created and kept on the device; the user can export one through the share sheet (point 9). The profile editor has no file import or export. |
+| Files and docs | Files and docs | None collected. Dual-record CSVs are created and kept on the device; the user can export one through the share sheet (point 9). Importing a ride reads a CSV file the user picks with the system file picker; only its time, power and cadence values are kept, on the device. Nothing is sent anywhere. |
 | Calendar | Calendar events | None. |
 | Contacts | Contacts | None. |
 | App activity | App interactions, In-app search history, Installed apps, Other user-generated content, Other actions | No analytics. Presets and profiles stay on the device. |

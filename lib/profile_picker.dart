@@ -2,13 +2,14 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'csv_import_dialog.dart';
 import 'power_profile.dart';
 import 'profile_editor_page.dart';
 import 'profile_player.dart';
 import 'profile_store.dart';
 
-/// Opens the profile library in a modal bottom sheet: pick a profile, or
-/// create / edit / duplicate / delete custom ones.
+/// Opens the profile library in a modal bottom sheet: pick a profile, create /
+/// edit / duplicate / delete custom ones, or import a ride from a CSV file.
 ///
 /// Changes are reported as they happen, like `SettingsPage`: [onSelected]
 /// with the newly selected id, and [onCustomProfilesChanged] with the whole
@@ -20,6 +21,8 @@ Future<void> showProfilePicker({
   required String selectedId,
   required ValueChanged<String> onSelected,
   required ValueChanged<List<PowerProfile>> onCustomProfilesChanged,
+  CsvFilePicker pickCsv = pickCsvFile,
+  CsvParser parseCsv = parseCsvInBackground,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -31,6 +34,8 @@ Future<void> showProfilePicker({
       selectedId: selectedId,
       onSelected: onSelected,
       onCustomProfilesChanged: onCustomProfilesChanged,
+      pickCsv: pickCsv,
+      parseCsv: parseCsv,
     ),
   );
 }
@@ -44,12 +49,20 @@ class ProfilePickerSheet extends StatefulWidget {
     required this.selectedId,
     required this.onSelected,
     required this.onCustomProfilesChanged,
+    this.pickCsv = pickCsvFile,
+    this.parseCsv = parseCsvInBackground,
   });
 
   final List<PowerProfile> customProfiles;
   final String selectedId;
   final ValueChanged<String> onSelected;
   final ValueChanged<List<PowerProfile>> onCustomProfilesChanged;
+
+  /// Picks the file for "Import CSV" (injectable for tests).
+  final CsvFilePicker pickCsv;
+
+  /// Parses it (injectable for tests).
+  final CsvParser parseCsv;
 
   @override
   State<ProfilePickerSheet> createState() => _ProfilePickerSheetState();
@@ -105,6 +118,34 @@ class _ProfilePickerSheetState extends State<ProfilePickerSheet> {
     _commit();
     _setSelected(saved.id);
     _toast('Created and selected “${saved.name}”');
+  }
+
+  Future<void> _importCsv() async {
+    if (!_canAdd) return;
+    final CsvFile? file;
+    try {
+      file = await widget.pickCsv();
+    } on FormatException catch (e) {
+      _toast(e.message);
+      return;
+    } catch (e) {
+      _toast('Couldn’t open the file: $e');
+      return;
+    }
+    if (file == null || !mounted) return;
+    final imported = await showDialog<PowerProfile>(
+      context: context,
+      builder: (_) => CsvImportDialog(
+        file: file!,
+        id: newCustomProfileId(taken: _takenIds),
+        parse: widget.parseCsv,
+      ),
+    );
+    if (imported == null || !mounted || !_canAdd) return;
+    setState(() => _custom.add(imported));
+    _commit();
+    _setSelected(imported.id);
+    _toast('Imported and selected “${imported.name}”');
   }
 
   Future<void> _edit(PowerProfile profile) async {
@@ -241,8 +282,8 @@ class _ProfilePickerSheetState extends State<ProfilePickerSheet> {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   child: Text(
-                    'No custom profiles yet. Tap New profile, or duplicate a '
-                    'built-in profile.',
+                    'No custom profiles yet. Tap New profile, import a CSV '
+                    'ride, or duplicate a built-in profile.',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium,
                   ),
@@ -252,10 +293,25 @@ class _ProfilePickerSheetState extends State<ProfilePickerSheet> {
                   profile: p,
                   selected: p.id == _selectedId,
                   onSelect: () => _select(p),
-                  onEdit: () => _edit(p),
+                  // Recorded rides have no segments to edit.
+                  onEdit: p.isRecorded ? null : () => _edit(p),
                   onDuplicate: canAdd ? () => _duplicate(p) : null,
                   onDelete: () => _delete(p),
                 ),
+              const SizedBox(height: 4),
+              OutlinedButton.icon(
+                key: const ValueKey('import-csv'),
+                onPressed: canAdd ? _importCsv : null,
+                icon: const Icon(Icons.file_open_outlined),
+                label: const Text('Import CSV ride'),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Replays a ride from a CSV file with time (seconds) and power '
+                'columns, e.g. a Dual record file.',
+                style: theme.textTheme.bodySmall,
+                textAlign: TextAlign.center,
+              ),
             ],
           ),
         ),

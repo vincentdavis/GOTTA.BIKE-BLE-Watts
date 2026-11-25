@@ -29,6 +29,11 @@ control. All values are simulated.
   editor. Built-ins:
   - **CdA · Crr · Mass estimation** (10 min, tarmac)
   - **Surface Crr (off-road)** (9 min, gravel or dirt)
+- **Replay a ride from CSV** (profile library › Import CSV ride): any CSV
+  with time (seconds, or `m:ss` / `h:mm:ss`) and power columns, optionally
+  cadence, up to 6 hours; Dual record files work too (pick device A or B).
+  It's resampled to 1 Hz and replayed second by second. FIT files aren't
+  supported yet.
 - **Dual record**: connect to two real sensors at once (power meters,
   smart trainers over FTMS, heart-rate or speed/cadence sensors), see their
   live power and cadence side by side, record both streams and compare
