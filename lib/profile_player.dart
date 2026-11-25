@@ -161,7 +161,7 @@ class ProfilePlayerView extends StatelessWidget {
         if (!canRun && !running) ...[
           const SizedBox(height: 6),
           Text(
-            'Start advertising and connect Zwift first, then run the profile.',
+            'Tap Start advertising below and connect Zwift, then run the profile.',
             style: theme.textTheme.bodySmall,
             textAlign: TextAlign.center,
           ),

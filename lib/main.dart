@@ -210,15 +210,23 @@ class _EmulatorPageState extends State<EmulatorPage> {
   }
 
   /// Stops the notify timer and advertising, and releases the keep-awake.
+  /// A running profile ends too: resuming it later would hide the gap from
+  /// whoever analyses the ride.
   Future<void> _stopBroadcast(String status) async {
     _notifyTimer?.cancel();
     _notifyTimer = null;
+    final endedProfile = _profileRunning;
     if (mounted) {
       setState(() {
         _advertising = false;
         _subscribers = 0;
-        _status = status;
+        _profileRunning = false;
+        _status = endedProfile
+            ? '$status The test profile was stopped too.'
+            : status;
       });
+    } else {
+      _profileRunning = false;
     }
     try {
       await _peripheral.stopAdvertising();
@@ -293,26 +301,35 @@ class _EmulatorPageState extends State<EmulatorPage> {
     }
   }
 
-  /// One measurement push per tick, driven by the running profile if any,
-  /// otherwise by the manual power/cadence.
-  void _onTick(Timer _) {
-    final dt = kNotifyInterval.inMilliseconds / 1000.0;
-    int power;
-    double cadence;
+  /// The power and cadence being broadcast right now: the running profile;
+  /// otherwise 0 W / 0 rpm in Test profile mode (so nothing unseen is sent
+  /// before a run or after it ends, e.g. after a coast-down); otherwise the
+  /// manual values.
+  ({int power, double cadence}) get _broadcastValues {
     if (_profileRunning) {
       final s = _profile.sampleAt(_profileElapsed);
-      power = s.power;
-      cadence = s.cadence.toDouble();
+      return (power: s.power, cadence: s.cadence.toDouble());
+    }
+    if (_mode == _Mode.profile) return (power: 0, cadence: 0);
+    return (power: _power.round(), cadence: _cadence);
+  }
+
+  /// One measurement push per tick (see [_broadcastValues]).
+  void _onTick(Timer _) {
+    final dt = kNotifyInterval.inMilliseconds / 1000.0;
+    final v = _broadcastValues;
+    final power = v.power;
+    final cadence = v.cadence;
+    if (_profileRunning) {
       _profileElapsed += dt;
       if (_profileElapsed >= _profile.totalSec) {
         _profileElapsed = _profile.totalSec.toDouble();
         _profileRunning = false;
-        _status = 'Profile complete.';
+        _status =
+            'Profile complete. Sending 0 W until you run a profile or '
+            'switch to Manual.';
       }
       if (mounted) setState(() {});
-    } else {
-      power = _power.round();
-      cadence = _cadence;
     }
     // Heart rate and speed always come from their manual values, also while a
     // profile (which only scripts power and cadence) is running.
@@ -483,9 +500,9 @@ class _EmulatorPageState extends State<EmulatorPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final shownProfile = _profileRunning ? _profile : _selectedProfile;
-    final sample = _profileRunning ? _profile.sampleAt(_profileElapsed) : null;
-    final shownPower = sample?.power ?? _power.round();
-    final shownCadence = sample?.cadence ?? _cadence.round();
+    final shown = _broadcastValues;
+    final shownPower = shown.power;
+    final shownCadence = shown.cadence.round();
     final s = _sensors;
     return Scaffold(
       appBar: AppBar(
@@ -616,6 +633,15 @@ class _EmulatorPageState extends State<EmulatorPage> {
                     ),
                   ),
                 ),
+              if (!_profileRunning)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    'While no profile is running, Test profile mode sends '
+                    '0 W and 0 rpm.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
               if (s.heartRate || s.speedCadence)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
@@ -635,19 +661,93 @@ class _EmulatorPageState extends State<EmulatorPage> {
                 onChangeProfile: _openProfilePicker,
               ),
             ],
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: _supported ? _toggleAdvertising : null,
-              icon: Icon(_advertising ? Icons.stop : Icons.bluetooth),
-              label: Text(_advertising ? 'Stop' : 'Start advertising'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: _advertising ? Colors.red.shade700 : null,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(_status, style: theme.textTheme.bodySmall),
           ],
+        ),
+      ),
+      // Always visible: the main action and what just happened.
+      bottomNavigationBar: _BroadcastBar(
+        supported: _supported,
+        advertising: _advertising,
+        status: _status,
+        onToggle: _toggleAdvertising,
+      ),
+    );
+  }
+}
+
+/// The bar pinned to the bottom of the main screen: the status line (errors
+/// highlighted) above the Start / Stop button.
+class _BroadcastBar extends StatelessWidget {
+  const _BroadcastBar({
+    required this.supported,
+    required this.advertising,
+    required this.status,
+    required this.onToggle,
+  });
+
+  final bool supported;
+  final bool advertising;
+  final String status;
+  final VoidCallback onToggle;
+
+  static final RegExp _problem = RegExp(
+    r'error|fail|not supported|turned off|denied',
+    caseSensitive: false,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isProblem = _problem.hasMatch(status);
+    return Material(
+      color: theme.colorScheme.surfaceContainer,
+      elevation: 3,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (status.isNotEmpty) ...[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (isProblem) ...[
+                      Icon(
+                        Icons.error_outline,
+                        size: 16,
+                        color: theme.colorScheme.error,
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    Expanded(
+                      child: Text(
+                        status,
+                        key: const ValueKey('status'),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: isProblem ? theme.colorScheme.error : null,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+              FilledButton.icon(
+                onPressed: supported ? onToggle : null,
+                icon: Icon(advertising ? Icons.stop : Icons.bluetooth),
+                label: Text(advertising ? 'Stop' : 'Start advertising'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: advertising ? Colors.red.shade700 : null,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -704,11 +804,16 @@ class _ReadoutCard extends StatelessWidget {
                   color: advertising ? Colors.greenAccent : theme.disabledColor,
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  advertising
-                      ? '$subscribers subscriber(s) connected'
-                      : 'not advertising',
-                  style: theme.textTheme.bodySmall,
+                Flexible(
+                  child: Text(
+                    !advertising
+                        ? 'Not advertising'
+                        : subscribers == 0
+                        ? 'Advertising · no apps connected'
+                        : 'Advertising · $subscribers '
+                              'app${subscribers == 1 ? '' : 's'} connected',
+                    style: theme.textTheme.bodySmall,
+                  ),
                 ),
               ],
             ),

@@ -49,10 +49,16 @@ records both to a CSV. Record-only, no rebroadcast (yet).
   steppers for each enabled sensor — power (step 5 W), cadence (1 rpm), speed
   (1 km/h), heart rate (1 bpm) — plus preset chips. Test-profile: plays the
   `PowerProfile` selected in the profile library (picker locked while a
-  profile runs); heart rate and speed keep their manual values. Also
-  start/stop advertising and a live subscriber count. A 500 ms timer
-  (`_onTick`) pushes a measurement each tick, driven by the running profile if
-  any, else the manual values.
+  profile runs); heart rate and speed keep their manual values. Start/Stop
+  advertising and the status line live in `_BroadcastBar`, pinned to the
+  bottom (`bottomNavigationBar`) so they're always visible; problem messages
+  are shown in the error colour. A live connected-apps count is in the
+  readout. A 500 ms timer (`_onTick`) pushes `_broadcastValues` each tick:
+  the running profile; else 0 W / 0 rpm in Test profile mode (never an
+  unseen manual value before a run or after a coast-down); else the manual
+  values. Stopping the broadcast (any reason) also ends a running profile,
+  so a run never silently resumes after a gap. `test/emulator_page_test.dart`
+  drives the whole screen with fake BLE platforms.
 - `lib/presets.dart` — pure `Preset` (power, cadence) model + `PresetStore`
   (`shared_preferences` persistence, max 5, sensible defaults). Keep the model
   pure/testable like `cpm_codec.dart`.
