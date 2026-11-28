@@ -242,6 +242,12 @@ run then:
 The files also stay in `build/release/v1.0.0/`. If the upload fails after the
 tag is pushed, the script prints the `gh release create` command to retry.
 
+### The Mac download
+
+After the release above, `tool/release_macos.sh 1.0.0` (run from the `v1.0.0`
+checkout) adds a Developer ID-signed, notarized DMG to the same GitHub
+Release for the website. Setup and steps: `macos-direct-download.md`.
+
 ### Things to know
 
 - [ ] **Signatures decide what installs over what.** Every release is signed

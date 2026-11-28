@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Entitlements for the Developer ID build that is downloaded from the
+  website (tool/release_macos.sh signs the app with these, with the hardened
+  runtime). The Xcode project does not use this file; Release.entitlements is
+  the Mac App Store one.
+
+  Keep the same sandbox as the App Store build, so both builds keep their
+  settings in the same container (~/Library/Containers/<bundle id>) and a
+  user can switch between them. Add nothing that needs a provisioning
+  profile (iCloud, push, associated domains...): a Developer ID build
+  carries none here. No hardened-runtime exceptions are needed: a Flutter
+  release build is AOT-compiled (no JIT) and loads only its own signed
+  frameworks.
+-->
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<!-- CoreBluetooth: advertise as a sensor, and connect to sensors in Dual record. -->
+	<key>com.apple.security.device.bluetooth</key>
+	<true/>
+	<!-- Import CSV rides and save / share Dual-record CSVs through the open and save panels. -->
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+</dict>
+</plist>
