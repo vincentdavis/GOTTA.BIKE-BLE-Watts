@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<!--
+  Support page: the App Store "Support URL" and the Play listing website.
+  Apple requires the Support URL to lead to real contact information.
+  Replace every bracketed placeholder before publishing.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Support: GOTTA.BIKE: BLE Watts</title>
+  <meta name="description" content="Help, troubleshooting and contact details for GOTTA.BIKE: BLE Watts.">
+  <meta name="theme-color" content="#0e1116">
+  <link rel="canonical" href="https://ble.gotta.bike/support">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="assets/icon-64.png" alt="" width="34" height="34">GOTTA.BIKE: BLE Watts</a>
+    <nav class="nav" aria-label="Main">
+      <a href="./#features">Features</a>
+      <a href="./#download">Download</a>
+      <a href="support.html" aria-current="page">Support</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="prose">
+  <h1>Support</h1>
+  <p class="meta">Help with GOTTA.BIKE: BLE Watts on iPhone, iPad, Mac, Android and Windows.</p>
+
+  <h2 id="contact">Contact us</h2>
+  <ul>
+    <li>Email: <a href="mailto:ble-watts@gotta.bike">ble-watts@gotta.bike</a></li>
+    <li>Bug reports and feature requests: <a href="https://github.com/vincentdavis/GOTTA.BIKE-BLE-Watts/issues">GitHub issues</a>.</li>
+  </ul>
+  <p>When you report a problem, tell us your device model, operating system version, app version (shown in the store listing or your device's app settings) and the app or bike computer you were connecting to.</p>
+
+  <h2 id="start">Getting started</h2>
+  <ol>
+    <li>Open the app and allow Bluetooth (on Android, "Nearby devices") when asked.</li>
+    <li>Choose <strong>Manual</strong> or <strong>Test profile</strong> and set the values you want.</li>
+    <li>Tap <strong>Start advertising</strong>.</li>
+    <li>In your cycling app or bike computer, search for a new power meter (or heart-rate or speed sensor). The app appears as <strong>GOTTA.BIKE Watts</strong> unless you renamed it in Settings.</li>
+    <li>Pair it like any real sensor. The readout shows how many apps are connected.</li>
+  </ol>
+
+  <h2 id="faq">Troubleshooting</h2>
+
+  <details>
+    <summary>My app or bike computer can't find the sensor</summary>
+    <ul>
+      <li>Make sure you tapped <strong>Start advertising</strong> and the status says it is broadcasting.</li>
+      <li>On iPhone and iPad, keep the app in the foreground. iOS only advertises sensor services while the app is on screen.</li>
+      <li>Search for the right sensor type: Cycling Power, Heart Rate or Speed &amp; Cadence must be switched on in <strong>Settings › Sensors</strong>.</li>
+      <li>Some receivers remember a sensor by name or address. Remove an old pairing and search again.</li>
+      <li>If the app says your device doesn't support Bluetooth advertising (peripheral mode), its Bluetooth hardware can't broadcast. Dual record still works.</li>
+    </ul>
+  </details>
+
+  <details>
+    <summary>Power shows, but cadence is zero or jumpy</summary>
+    <p>Receivers work out cadence from crank revolution data rather than reading a number, so they need a few seconds of updates. Make sure cadence is above zero and give it a few seconds. If you stop and start often, re-pair the sensor.</p>
+  </details>
+
+  <details>
+    <summary>The connection drops when the screen turns off (Android)</summary>
+    <p>Android pauses apps when the screen turns off. The app keeps the screen on while broadcasting. To keep broadcasting with the screen off or while you use other apps, turn on <strong>Settings › Keep broadcasting with screen off</strong>; Android then shows a notification with a Stop button.</p>
+  </details>
+
+  <details>
+    <summary>My phone's Bluetooth name changed (Android)</summary>
+    <p>On Android the app advertises its name by temporarily renaming your phone's Bluetooth adapter, and restores it when you tap Stop. If the app closed unexpectedly while broadcasting, change the name back in Android's Bluetooth settings.</p>
+  </details>
+
+  <details>
+    <summary>Dual record can't find my sensor</summary>
+    <ul>
+      <li>Wake the sensor up (spin the cranks, put on the heart-rate strap).</li>
+      <li>Disconnect it from other apps or head units first: many sensors accept only one or two connections.</li>
+      <li>On Android 11 and older, switch on the phone's Location setting while scanning. The app never reads your location.</li>
+      <li>Dual record isn't available while the app is broadcasting. Stop broadcasting first.</li>
+    </ul>
+  </details>
+
+  <details>
+    <summary>Where are my recordings, and how do I delete them?</summary>
+    <p>Recordings are saved in the app's own storage on your device. Use <strong>Share CSV</strong> to send one to another app, Files, email or cloud storage. Uninstalling the app removes them.</p>
+  </details>
+
+  <details>
+    <summary>Which CSV files can I import as a ride?</summary>
+    <p>Any CSV with a time column (seconds, <code>m:ss</code> or <code>h:mm:ss</code>) and a power column, optionally cadence, up to six hours. Files without a header are read as time, power, cadence. Dual record CSVs work too: pick device A or B. FIT files aren't supported yet.</p>
+  </details>
+
+  <details>
+    <summary>Is the app a smart trainer? Can it do ERG mode?</summary>
+    <p>No. It is a sensor emulator: it sends values but doesn't accept resistance or ERG commands.</p>
+  </details>
+
+  <details>
+    <summary>Can I use it for races or leaderboards?</summary>
+    <p>No. The data is simulated. Use it for testing only, keep test activities off leaderboards and follow the rules of every platform you connect it to. See the <a href="terms.html">Terms of Use</a>.</p>
+  </details>
+
+  <h2 id="privacy">Privacy</h2>
+  <p>The app doesn't collect any data. See the <a href="privacy.html">Privacy Policy</a>.</p>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="cols">
+      <div>GOTTA.BIKE: BLE Watts</div>
+      <nav aria-label="Footer">
+        <a href="mailto:ble-watts@gotta.bike">Contact</a>
+        <a href="support.html">Support</a>
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="terms.html">Terms of Use</a>
+        <a href="https://github.com/vincentdavis/GOTTA.BIKE-BLE-Watts">Source code</a>
+      </nav>
+    </div>
+    <p class="fine">© 2026 Vincent Davis.</p>
+  </div>
+</footer>
+</body>
+</html>

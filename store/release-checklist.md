@@ -9,7 +9,7 @@ Companion documents in this folder:
 | File | Used in step |
 |---|---|
 | `listing.md` | 8 (store listing text, category, contact details) |
-| `privacy-policy.html` / `.md` | 9 (host it, then paste the URL) |
+| `../website/` (privacy, terms, support pages) | 9 (deploy it, then paste the URL) |
 | `data-safety.md` | 9 (Data safety form answers) |
 | `content-rating.md` | 9 (IARC questionnaire answers) |
 | `graphics/icon-512.png`, `graphics/feature-graphic-1024x500.png` | 8 (graphics) |
@@ -127,9 +127,9 @@ keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab
 
 ## 9. App content (Monitor and improve › App content)
 
-- [ ] **Privacy policy**: host `privacy-policy.html` at a public URL (for
-      example GitHub Pages), fill in its effective date and contact
-      placeholders first, then paste the URL.
+- [ ] **Privacy policy**: fill in the placeholders in `website/` and deploy
+      it to Cloudflare Pages (`website/README.md`), then paste
+      `https://ble.gotta.bike/privacy`.
 - [ ] **Ads**: no ads.
 - [ ] **App access**: all functionality is available without special access
       (no login).

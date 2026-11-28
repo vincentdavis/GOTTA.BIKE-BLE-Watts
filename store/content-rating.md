@@ -15,7 +15,7 @@ Google's steps for the questionnaire
 2. Under **Content ratings**, click **Start**.
 3. Read the information and enter an email address. It "will be used for
    correspondence with International Age Rating Coalition (IARC)". Use
-   `[CONTACT EMAIL]`.
+   `ble-watts@gotta.bike`.
 4. **Select a category** and click **Next**.
 5. Complete the questionnaire.
 6. Review the calculated ratings on the **Summary** page and submit.
