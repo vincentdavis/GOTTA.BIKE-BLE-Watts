@@ -10,9 +10,11 @@ sensor (Settings › Sensors; at least one service is always on). It is a
 **Dual record** (app-bar action) turns the phone into a BLE *central*
 instead: it connects to two real sensors, shows them side by side and
 records both to a CSV. Record-only, no rebroadcast (yet).
+Platforms: Android, iPhone + iPad (iOS/iPadOS 27+) and a native macOS app
+(macOS 27+, App Store, sandboxed), one App Store record for Apple.
 
 ## Stack
-- Flutter (Dart >=3.1.3, Flutter >=3.3.0)
+- Flutter (Dart ^3.12.2; CI pins Flutter 3.44.7)
 - BLE: `universal_ble` ^2.0.4 — peripheral / GATT-server + advertising
 - `wakelock_plus` (keep screen on while advertising / dual recording);
   `shared_preferences` (persist presets, device identity, profiles, the
@@ -147,9 +149,21 @@ records both to a CSV. Record-only, no rebroadcast (yet).
   PLACEHOLDER launcher icons and Play graphics and run
   `flutter_launcher_icons` (dev dependency) safely; never run that tool on
   its own (it corrupts `project.pbxproj`, see the yaml).
+- `lib/responsive.dart` — `kMaxContentWidth` (720) and `contentPadding`
+  / `ContentWidth`: every screen body is a centred column at most that
+  wide, so iPad, Mac and desktop windows don't stretch it edge to edge.
+  Use `contentPadding` for new scrollable screens. Phones are unchanged.
+- `macos/` — the native macOS app (App Store). `Runner/Release.entitlements`
+  = App Sandbox + Bluetooth + user-selected files read/write;
+  `DebugProfile.entitlements` adds only what `flutter run` needs. Info.plist
+  has the Bluetooth texts (same as iOS) and `NSAppSleepDisabled` (no App
+  Nap: a hidden window must keep notifying). `MainFlutterWindow.swift` sets
+  the title and the window's minimum / initial size. The product is
+  `BLE Watts.app`. Icons come from `generate_icon.py` (macOS grid).
 - `store/` — Play listing, privacy policy (`.md` + hosted `.html`, keep in
-  sync), Data safety and content-rating answers, release checklist, and the
-  store graphics. Update them when permissions or features change.
+  sync), Data safety and content-rating answers, release checklist, the
+  Apple (iPhone/iPad/Mac) checklist `apple-app-store.md`, and the store
+  graphics. Update them when permissions or features change.
 
 ## Protocol invariants (do not break)
 - CPM packet (`0x2A63`) is little-endian: uint16 flags (`0x0020` = crank data
@@ -258,10 +272,16 @@ records both to a CSV. Record-only, no rebroadcast (yet).
   notifications for the main engine.
 - Play Console: the `connectedDevice` foreground service needs the
   foreground-service declaration (App content) before release.
-- iOS deployment target is 15.0 in `ios/Runner.xcodeproj/project.pbxproj`
-  (Xcode 27 supports 15.0+; `universal_ble` via Swift Package Manager needs
-  >= 13.1). Re-running `flutter create` resets it to 13.0 and breaks the iOS
-  build — bump it back to 15.0.
+- Minimum OS is 27.0 on Apple: `IPHONEOS_DEPLOYMENT_TARGET` in
+  `ios/Runner.xcodeproj/project.pbxproj` and `MACOSX_DEPLOYMENT_TARGET` in
+  `macos/Runner.xcodeproj/project.pbxproj` (needs Xcode 27+). Re-running
+  `flutter create` resets them (13.0 / 10.15): set them back to 27.0. The
+  iOS target is iPhone + iPad (`TARGETED_DEVICE_FAMILY = "1,2"`).
+- macOS: the Mac App Store build shares the iOS bundle ID (universal
+  purchase). Bluetooth needs `com.apple.security.device.bluetooth` in both
+  entitlements files, or `universal_ble` reports Bluetooth unsupported.
+  The screen-off mode is Android only; on a desktop Dual record also offers
+  "Save CSV as…" (`RecordingFiles.canSaveAs`).
 - iOS bundle ID is `ble.watts.bike.gotta` (Android's applicationId is
   `ble.make.bike.gotta`; they are independent). `ios/Runner/Info.plist` sets
   `ITSAppUsesNonExemptEncryption = false` and has no background modes (iOS

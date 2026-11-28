@@ -16,6 +16,17 @@ const idB = 'BB:00:00:00:00:02';
 class FakeFiles extends RecordingFiles {
   final saved = <String, String>{};
   final shared = <String>[];
+  final savedAs = <String>[];
+  bool desktop = false;
+
+  @override
+  bool get canSaveAs => desktop;
+
+  @override
+  Future<String?> saveAs(String path) async {
+    savedAs.add(path);
+    return '/Users/rider/ride.csv';
+  }
 
   @override
   Future<String> save(String fileName, String csv) async {
@@ -175,6 +186,8 @@ void main() {
     expect(find.text('B vs A: +10.0 %'), findsOneWidget);
     expect(tester.takeException(), isNull); // no overflow while recording
 
+    expect(find.text('Save CSV as…'), findsNothing);
+    files.desktop = true; // read when the saved state is built
     await tester.tap(find.text('Stop recording'));
     await tester.pumpAndSettle();
     expect(files.saved, hasLength(1));
@@ -187,6 +200,12 @@ void main() {
     await tester.tap(find.text('Share CSV'));
     await tester.pump();
     expect(files.shared.single, startsWith('/recordings/dual-record-'));
+    // Desktops (see the build below) can also save a copy where they like.
+    await tester.ensureVisible(find.text('Save CSV as…'));
+    await tester.tap(find.text('Save CSV as…'));
+    await tester.pump();
+    expect(files.savedAs.single, files.shared.single);
+    expect(find.text('Saved to /Users/rider/ride.csv.'), findsOneWidget);
 
     await tester.tap(find.text('Disconnect').first);
     await tester.pumpAndSettle();

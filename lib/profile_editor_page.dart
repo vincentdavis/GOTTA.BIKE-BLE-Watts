@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'limits.dart';
 import 'power_profile.dart';
 import 'profile_player.dart';
+import 'responsive.dart';
 
 /// The segment a new profile starts with (and the one "Add segment" adds to an
 /// empty profile).
@@ -238,7 +239,10 @@ class _ProfileEditorPageState extends State<ProfileEditorPage> {
             ],
           ),
           body: ReorderableListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+            padding: contentPadding(
+              context,
+              const EdgeInsets.fromLTRB(16, 8, 16, 32),
+            ),
             buildDefaultDragHandles: false,
             header: _buildHeader(theme, draft),
             footer: _buildFooter(),

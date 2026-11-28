@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:cps_emulator/main.dart';
+import 'package:cps_emulator/responsive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -89,9 +90,13 @@ void main() {
         );
   });
 
-  Future<void> pumpApp(WidgetTester tester) async {
-    tester.view.physicalSize = const Size(1080, 2400); // 360x800
-    tester.view.devicePixelRatio = 3.0;
+  Future<void> pumpApp(
+    WidgetTester tester, {
+    Size size = const Size(1080, 2400), // 360x800
+    double dpr = 3.0,
+  }) async {
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = dpr;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(const CpsEmulatorApp());
     await tester.pump(const Duration(milliseconds: 50));
@@ -118,6 +123,29 @@ void main() {
     expect(start.hitTestable(), findsOneWidget);
     expect(tester.getRect(start).bottom, lessThanOrEqualTo(800));
     expect(find.byKey(const ValueKey('status')).hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a wide iPad / Mac window centres a capped column', (
+    tester,
+  ) async {
+    // iPad Pro 13" landscape: 1376x1032 pt.
+    await pumpApp(tester, size: const Size(2752, 2064), dpr: 2.0);
+    for (final text in ['Start advertising', 'Manual']) {
+      final rect = tester.getRect(
+        find
+            .ancestor(
+              of: find.text(text),
+              matching: find.byWidgetPredicate(
+                (w) => w is FilledButton || w is SegmentedButton,
+              ),
+            )
+            .first,
+      );
+      expect(rect.width, lessThanOrEqualTo(kMaxContentWidth), reason: text);
+      expect(rect.center.dx, closeTo(1376 / 2, 1), reason: text);
+    }
+    await tapText(tester, 'Test profile');
     expect(tester.takeException(), isNull);
   });
 

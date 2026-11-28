@@ -41,6 +41,10 @@ assets/icon/icon_foreground.png  1024x1024 RGBA. Android adaptive-icon
 assets/icon/icon_monochrome.png  1024x1024 RGBA, white + alpha only. Android
                                  13+ themed-icon layer, same geometry.
 assets/icon/icon.svg             Vector copy of icon.png.
+macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_*.png
+                                 macOS icons (16-1024), drawn from icon.png on
+                                 Apple's 824/1024 rounded-square grid by the
+                                 launcher step (the tool has no macOS support).
 store/graphics/icon-512.png      512x512 32-bit PNG (Play hi-res icon).
 store/graphics/feature-graphic-1024x500.png
                                  1024x500 24-bit PNG, no alpha (Play feature
@@ -632,6 +636,37 @@ def run_launcher_icons() -> None:
 
 
 # ---------------------------------------------------------------------------
+# macOS app icon (flutter_launcher_icons 0.14.4 has no macOS support)
+# ---------------------------------------------------------------------------
+MACOS_ICONSET = REPO_ROOT / "macos" / "Runner" / "Assets.xcassets" / "AppIcon.appiconset"
+# Apple's macOS icon grid: on a 1024 canvas the rounded-square body is 824
+# wide, centred, with transparent margins (macOS doesn't mask icons itself).
+MACOS_BODY_FRACTION = 824 / 1024
+MACOS_ICON_SIZES = (16, 32, 64, 128, 256, 512, 1024)
+
+
+def make_macos_icon(size: int = 1024) -> Image.Image:
+    icon = Image.open(ICON_DIR / "icon.png").convert("RGBA")
+    body = round(size * MACOS_BODY_FRACTION)
+    big = body * SUPERSAMPLE
+    mask = _superellipse(big).resize((body, body), Image.Resampling.LANCZOS)
+    out = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    offset = (size - body) // 2
+    out.paste(icon.resize((body, body), Image.Resampling.LANCZOS), (offset, offset), mask)
+    return out
+
+
+def write_macos_icons() -> None:
+    if not MACOS_ICONSET.is_dir():
+        print(f"skipped macOS icons: {MACOS_ICONSET.relative_to(REPO_ROOT)} not found")
+        return
+    master = make_macos_icon(1024)
+    for px in MACOS_ICON_SIZES:
+        image = master if px == 1024 else master.resize((px, px), Image.Resampling.LANCZOS)
+        _save(image, MACOS_ICONSET / f"app_icon_{px}.png")
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 def _save(image: Image.Image, path: Path) -> None:
@@ -675,6 +710,7 @@ def main(argv: list[str] | None = None) -> None:
     if not args.launcher_only:
         write_art()
     if not args.art_only:
+        write_macos_icons()
         run_launcher_icons()
     if args.preview:
         write_previews(args.preview)

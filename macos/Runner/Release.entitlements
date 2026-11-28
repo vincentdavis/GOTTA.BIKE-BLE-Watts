@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Mac App Store build. Keep in step with DebugProfile.entitlements
+	     (which only adds what `flutter run` needs to attach a debugger). -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<!-- Advertise as a sensor and connect to sensors (universal_ble). -->
+	<key>com.apple.security.device.bluetooth</key>
+	<true/>
+	<!-- Import a CSV ride the user picks (file_selector). -->
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+</dict>
+</plist>
