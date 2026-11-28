@@ -203,6 +203,16 @@ void main() {
       expect(fake.advertisedName, 'ABCDEFGHIJKLMNOPQR');
       expect(peripheral.advertisedName, 'ABCDEFGHIJKLMNOPQR');
     });
+
+    test('Windows: no name, and Device Information is published', () async {
+      final windows = CyclingPowerPeripheral(windows: true);
+      expect(windows.canAdvertiseName, isFalse);
+      expect(peripheral.canAdvertiseName, isTrue);
+      await windows.setup(_all);
+      await windows.startAdvertising();
+      expect(fake.advertisedServices, ['1818', '180d', '1816', '180a']);
+      expect(fake.advertisedName, isNull);
+    });
   });
 
   group('pushMeasurement', () {

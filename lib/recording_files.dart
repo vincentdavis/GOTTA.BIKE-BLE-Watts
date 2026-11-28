@@ -2,6 +2,8 @@
 ///
 /// Recordings are written to the app's private documents folder
 /// (`recordings/`), so they stay on the device until the user shares them.
+/// On Windows that folder is the user's own Documents, so they go into
+/// `Documents\GOTTA.BIKE BLE Watts\recordings` instead.
 /// Tests replace [RecordingFiles] with a fake.
 library;
 
@@ -17,9 +19,14 @@ class RecordingFiles {
   /// Writes [csv] as [fileName]; returns the file's path.
   Future<String> save(String fileName, String csv) async {
     final docs = await getApplicationDocumentsDirectory();
-    final dir = Directory('${docs.path}/recordings');
+    final sep = Platform.pathSeparator;
+    final dir = Directory(
+      Platform.isWindows
+          ? '${docs.path}${sep}GOTTA.BIKE BLE Watts${sep}recordings'
+          : '${docs.path}${sep}recordings',
+    );
     await dir.create(recursive: true);
-    final file = File('${dir.path}/$fileName');
+    final file = File('${dir.path}$sep$fileName');
     await file.writeAsString(csv, flush: true);
     return file.path;
   }
@@ -30,7 +37,7 @@ class RecordingFiles {
     await SharePlus.instance.share(
       ShareParams(
         files: [XFile(path, mimeType: 'text/csv')],
-        subject: path.split('/').last,
+        subject: path.split(Platform.pathSeparator).last,
         sharePositionOrigin: origin,
       ),
     );

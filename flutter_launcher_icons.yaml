@@ -1,4 +1,4 @@
-# flutter_launcher_icons (0.14.4) config for the Android + iOS launcher icons.
+# flutter_launcher_icons (0.14.4) config for the Android, iOS and Windows app icons.
 #
 # Don't run `dart run flutter_launcher_icons` on its own: 0.14.4 also rewrites
 # ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS in
@@ -40,3 +40,11 @@ flutter_launcher_icons:
   # channels on semi-transparent pixels (_alphaBlend in lib/ios.dart).
   remove_alpha_ios: true
   background_color_ios: "#0E1116"
+
+  # Windows: writes windows/runner/resources/app_icon.ico (Runner.rc's
+  # IDI_APP_ICON) from image_path. 256 px is the largest size an .ico holds;
+  # Windows scales it down for the taskbar, title bar and Start menu.
+  windows:
+    generate: true
+    image_path: "assets/icon/icon.png"
+    icon_size: 256

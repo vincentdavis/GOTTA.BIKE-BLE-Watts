@@ -22,6 +22,7 @@ class SettingsPage extends StatefulWidget {
     this.onSensorsChanged,
     this.screenOff = false,
     this.onScreenOffChanged,
+    this.nameAdvertised = true,
   });
 
   final DeviceIdentity identity;
@@ -42,6 +43,10 @@ class SettingsPage extends StatefulWidget {
   /// while advertising.
   final bool screenOff;
   final ValueChanged<bool>? onScreenOffChanged;
+
+  /// False where the OS can't put the device name in the advertisement
+  /// (Windows); the name field then says so.
+  final bool nameAdvertised;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -143,6 +148,7 @@ class _SettingsPageState extends State<SettingsPage> {
           _DeviceIdentitySection(
             identity: widget.identity,
             onChanged: widget.onIdentityChanged,
+            nameAdvertised: widget.nameAdvertised,
           ),
           const SizedBox(height: 8),
           const Divider(),
@@ -345,10 +351,12 @@ class _DeviceIdentitySection extends StatefulWidget {
   const _DeviceIdentitySection({
     required this.identity,
     required this.onChanged,
+    this.nameAdvertised = true,
   });
 
   final DeviceIdentity identity;
   final ValueChanged<DeviceIdentity> onChanged;
+  final bool nameAdvertised;
 
   @override
   State<_DeviceIdentitySection> createState() => _DeviceIdentitySectionState();
@@ -390,11 +398,17 @@ class _DeviceIdentitySectionState extends State<_DeviceIdentitySection> {
           controller: _name,
           textCapitalization: TextCapitalization.words,
           maxLength: kMaxDeviceNameLength,
-          decoration: const InputDecoration(
-            labelText: 'Device name (advertised)',
-            helperText:
-                'Shown in Zwift’s pairing list. Applies next time you start '
-                'advertising.',
+          decoration: InputDecoration(
+            labelText: widget.nameAdvertised
+                ? 'Device name (advertised)'
+                : 'Device name',
+            helperText: widget.nameAdvertised
+                ? 'Shown in Zwift’s pairing list. Applies next time you start '
+                      'advertising.'
+                : 'Windows can’t advertise a custom name, so apps list this '
+                      'PC by its own Bluetooth name (or as an unnamed '
+                      'sensor).',
+            helperMaxLines: widget.nameAdvertised ? null : 3,
           ),
           onChanged: (_) => _emit(),
         ),
