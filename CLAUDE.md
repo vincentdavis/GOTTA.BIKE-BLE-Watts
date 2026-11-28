@@ -214,6 +214,16 @@ records both to a CSV. Record-only, no rebroadcast (yet).
   tag and runs `gh release create` with APK + AAB + SHA256SUMS. Don't add a
   tag-triggered release workflow (the script refuses to run if
   `.github/workflows/release.yml` exists).
+- Mac download (outside the Mac App Store): after `tool/release.sh X.Y.Z`,
+  check out `vX.Y.Z` and run `tool/release_macos.sh X.Y.Z [--dry-run]` on
+  the Mac. It builds `flutter build macos --release`, re-signs with the
+  Developer ID certificate + hardened runtime using
+  `macos/Runner/DeveloperID.entitlements` (not the App Store
+  `Release.entitlements`; keep the two sandbox sets equal), notarizes and
+  staples the app and a DMG, and adds `gotta-bike-ble-watts-macos.dmg`
+  (versionless name, so `releases/latest/download/...` works for the
+  website) to that GitHub Release. Certificate and notary profile stay in
+  the keychain, never on GitHub. Setup: `store/macos-direct-download.md`.
 
 ## Testing constraints
 - BLE peripheral mode does NOT work in the iOS Simulator. A recent Android
