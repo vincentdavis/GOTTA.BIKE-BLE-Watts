@@ -105,11 +105,29 @@ class CyclingPowerPeripheral {
     beats.reset();
   }
 
-  /// Whether this device's BLE chipset/OS can act as a GATT-server peripheral.
-  Future<bool> isSupported() async {
-    final caps = await UniversalBlePeripheral.getCapabilities();
-    return caps.supportsPeripheralMode;
+  /// Whether the GATT server can be used now. Waits out the brief `unknown`
+  /// state that iOS reports while CoreBluetooth powers on: services added
+  /// before then are ignored and time out.
+  ///
+  /// Android reports `unsupported` (not `bluetoothOff`) while the adapter is
+  /// off, so check the central availability for "Bluetooth is off" first.
+  Future<PeripheralReadinessState> readiness({
+    Duration timeout = const Duration(seconds: 3),
+    Duration poll = const Duration(milliseconds: 100),
+  }) async {
+    final attempts = timeout.inMicroseconds ~/ poll.inMicroseconds;
+    for (var i = 0; ; i++) {
+      final state = await UniversalBlePeripheral.getAvailabilityState();
+      if (state != PeripheralReadinessState.unknown || i >= attempts) {
+        return state;
+      }
+      await Future<void>.delayed(poll);
+    }
   }
+
+  /// Forgets the registered services, so the next [setup] registers them
+  /// again. Call it when Bluetooth turns off, which drops them.
+  void invalidateServices() => _registered = null;
 
   static bool _sameServices(SensorConfig a, SensorConfig b) =>
       a.cyclingPower == b.cyclingPower &&

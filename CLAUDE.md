@@ -56,7 +56,13 @@ records both to a CSV. Record-only, no rebroadcast (yet).
   readout. A 500 ms timer (`_onTick`) pushes `_broadcastValues` each tick:
   the running profile; else 0 W / 0 rpm in Test profile mode (never an
   unseen manual value before a run or after a coast-down); else the manual
-  values. Stopping the broadcast (any reason) also ends a running profile,
+  values. Bluetooth readiness (`_init`) is re-runnable: Bluetooth off,
+  a refused permission or a failed setup shows "Try again" instead of a
+  dead Start button, and turning Bluetooth back on re-registers the
+  services. It waits out iOS's brief `unknown` peripheral state
+  (`readiness()`), and treats Android's `unsupported` while the adapter is
+  off as "Bluetooth is off". Stopping the broadcast (any reason) also ends
+  a running profile,
   so a run never silently resumes after a gap. `test/emulator_page_test.dart`
   drives the whole screen with fake BLE platforms.
 - `lib/presets.dart` — pure `Preset` (power, cadence) model + `PresetStore`

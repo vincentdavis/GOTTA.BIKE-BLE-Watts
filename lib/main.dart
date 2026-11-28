@@ -117,67 +117,162 @@ class _EmulatorPageState extends State<EmulatorPage> {
     _loadScreenOff();
   }
 
+  /// Set while [_init] runs, so "Try again" can't start a second run.
+  bool _initializing = false;
+
+  /// Whether [_init] can succeed later (Bluetooth off, permission missing,
+  /// a failed setup), so the main button offers "Try again". False on a
+  /// device without peripheral support.
+  bool _canRetry = false;
+
+  bool _sensorsLoaded = false;
+
+  /// Gets Bluetooth ready to broadcast. Safe to call again: it runs once at
+  /// launch, from "Try again", and when Bluetooth is turned back on.
   Future<void> _init() async {
+    if (_initializing) return;
+    _initializing = true;
     try {
-      // The service selection must be known before the GATT server is set up.
-      final sensors = await _sensorStore.load();
-      if (!mounted) return;
-      setState(() => _sensors = sensors);
-      await UniversalBle.requestPermissions(withAndroidFineLocation: false);
-      if (!mounted) return;
-      final supported = await _peripheral.isSupported();
-      if (!mounted) return;
-      if (!supported) {
-        setState(() {
-          _supported = false;
-          _status = 'Peripheral mode not supported on this device.';
-        });
+      await _initBluetooth();
+    } finally {
+      _initializing = false;
+    }
+  }
+
+  static const String _bluetoothOff =
+      'Bluetooth is off. Turn it on to broadcast.';
+  static const String _permissionNeeded =
+      'Bluetooth permission is needed to broadcast. Allow it in the system '
+      'Settings for this app (Nearby devices on Android), then tap Try again.';
+
+  void _notReady(String status) {
+    if (!mounted) return;
+    setState(() {
+      _supported = false;
+      _canRetry = true;
+      _status = status;
+    });
+  }
+
+  Future<void> _initBluetooth() async {
+    try {
+      if (!_sensorsLoaded) {
+        // The service selection must be known before the GATT server is set
+        // up.
+        final sensors = await _sensorStore.load();
+        if (!mounted) return;
+        _sensorsLoaded = true;
+        setState(() => _sensors = sensors);
+      }
+      _listenToBluetooth();
+      try {
+        await UniversalBle.requestPermissions(withAndroidFineLocation: false);
+      } catch (_) {
+        _notReady(_permissionNeeded);
         return;
+      }
+      if (!mounted) return;
+      AvailabilityState? central;
+      try {
+        central = await UniversalBle.getBluetoothAvailabilityState();
+      } catch (_) {}
+      if (!mounted) return;
+      if (central == AvailabilityState.poweredOff) {
+        _notReady(_bluetoothOff);
+        return;
+      }
+      final readiness = await _peripheral.readiness();
+      if (!mounted) return;
+      switch (readiness) {
+        case PeripheralReadinessState.ready:
+          break;
+        case PeripheralReadinessState.unsupported:
+          setState(() {
+            _supported = false;
+            _canRetry = false;
+            _status = 'Peripheral mode not supported on this device.';
+          });
+          return;
+        case PeripheralReadinessState.bluetoothOff:
+          _notReady(_bluetoothOff);
+          return;
+        case PeripheralReadinessState.unauthorized:
+          _notReady(_permissionNeeded);
+          return;
+        case PeripheralReadinessState.unknown:
+          _notReady('Bluetooth isn’t ready yet. Tap Try again.');
+          return;
       }
       await _peripheral.setup(_sensors);
       if (!mounted) return;
 
-      _subSub = UniversalBlePeripheral.characteristicSubscriptionStream.listen((
-        event,
-      ) async {
-        final count = await _peripheral.subscriberCount();
-        if (mounted) setState(() => _subscribers = count);
+      setState(() {
+        _supported = true;
+        _canRetry = false;
+        _status = 'Ready. Tap Start to advertise.';
       });
-
-      // Start/stop set _advertising themselves. Only a failure to start,
-      // which Android reports asynchronously, needs handling here.
-      _advSub = UniversalBlePeripheral.advertisingStateStream.listen((event) {
-        if (!mounted || event.state != PeripheralAdvertisingState.error) {
-          return;
-        }
-        final message = 'Advertising failed: ${event.error ?? 'unknown error'}';
-        if (_advertising) {
-          unawaited(_stopBroadcast(message));
-        } else {
-          setState(() => _status = message);
-        }
+      // Settings may have changed while the services were being registered.
+      if (_peripheral.sensors != _sensors) await _applySensors(_sensors);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _supported = false;
+        _canRetry = true;
+        _status = 'Init failed: $e';
       });
+    }
+  }
 
-      // Don't keep the timer and keep-awake running without Bluetooth.
-      _availabilitySub = UniversalBle.availabilityStream.listen((state) {
-        if (mounted && _advertising && state == AvailabilityState.poweredOff) {
+  /// Subscribes (once) to subscriptions, advertising errors and Bluetooth
+  /// on/off.
+  void _listenToBluetooth() {
+    _subSub ??= UniversalBlePeripheral.characteristicSubscriptionStream.listen((
+      event,
+    ) async {
+      final count = await _peripheral.subscriberCount();
+      if (mounted) setState(() => _subscribers = count);
+    });
+
+    // Start/stop set _advertising themselves. Only a failure to start,
+    // which Android reports asynchronously, needs handling here.
+    _advSub ??= UniversalBlePeripheral.advertisingStateStream.listen((event) {
+      if (!mounted || event.state != PeripheralAdvertisingState.error) {
+        return;
+      }
+      final message = 'Advertising failed: ${event.error ?? 'unknown error'}';
+      if (_advertising) {
+        unawaited(_stopBroadcast(message));
+      } else {
+        setState(() => _status = message);
+      }
+    });
+
+    // Bluetooth off drops the GATT services: stop, and set them up again
+    // once it is back on. Don't keep the timer and keep-awake running
+    // without Bluetooth.
+    _availabilitySub ??= UniversalBle.availabilityStream.listen((state) {
+      if (!mounted) return;
+      if (state == AvailabilityState.poweredOff) {
+        _peripheral.invalidateServices();
+        final wasAdvertising = _advertising;
+        setState(() {
+          _supported = false;
+          _canRetry = true;
+          if (!wasAdvertising) _status = _bluetoothOff;
+        });
+        if (wasAdvertising) {
           unawaited(
             _stopBroadcast(
               'Bluetooth was turned off, so broadcasting stopped.',
             ),
           );
         }
-      });
-
-      setState(() {
-        _supported = true;
-        _status = 'Ready. Tap Start to advertise.';
-      });
-      // Settings may have changed while the services were being registered.
-      if (_peripheral.sensors != _sensors) await _applySensors(_sensors);
-    } catch (e) {
-      if (mounted) setState(() => _status = 'Init failed: $e');
-    }
+      } else if (state == AvailabilityState.poweredOn &&
+          !_supported &&
+          _canRetry) {
+        unawaited(_init());
+      }
+    });
   }
 
   Future<void> _toggleAdvertising() async {
@@ -670,6 +765,7 @@ class _EmulatorPageState extends State<EmulatorPage> {
         advertising: _advertising,
         status: _status,
         onToggle: _toggleAdvertising,
+        onRetry: _canRetry ? _init : null,
       ),
     );
   }
@@ -683,6 +779,7 @@ class _BroadcastBar extends StatelessWidget {
     required this.advertising,
     required this.status,
     required this.onToggle,
+    this.onRetry,
   });
 
   final bool supported;
@@ -690,8 +787,11 @@ class _BroadcastBar extends StatelessWidget {
   final String status;
   final VoidCallback onToggle;
 
+  /// Shown as "Try again" while not [supported], when retrying can help.
+  final VoidCallback? onRetry;
+
   static final RegExp _problem = RegExp(
-    r'error|fail|not supported|turned off|denied',
+    r'error|fail|not supported|turned off|is off|denied|permission',
     caseSensitive: false,
   );
 
@@ -738,9 +838,21 @@ class _BroadcastBar extends StatelessWidget {
                 const SizedBox(height: 8),
               ],
               FilledButton.icon(
-                onPressed: supported ? onToggle : null,
-                icon: Icon(advertising ? Icons.stop : Icons.bluetooth),
-                label: Text(advertising ? 'Stop' : 'Start advertising'),
+                onPressed: supported ? onToggle : onRetry,
+                icon: Icon(
+                  advertising
+                      ? Icons.stop
+                      : (!supported && onRetry != null
+                            ? Icons.refresh
+                            : Icons.bluetooth),
+                ),
+                label: Text(
+                  advertising
+                      ? 'Stop'
+                      : (!supported && onRetry != null
+                            ? 'Try again'
+                            : 'Start advertising'),
+                ),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   backgroundColor: advertising ? Colors.red.shade700 : null,
