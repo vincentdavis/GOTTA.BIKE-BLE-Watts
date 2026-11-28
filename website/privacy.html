@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<!--
+  Privacy policy for GOTTA.BIKE: BLE Watts on every platform.
+  This page is the hosted policy: link it from App Store Connect (Privacy
+  Policy URL), Play Console (App content > Privacy policy) and from inside
+  the app. Keep store/privacy-policy.md in sync with it.
+
+  Owner notes (not shown on the page):
+  - Replace every bracketed placeholder before publishing; the build check
+    (tool/check_website.sh) refuses to deploy while any remain.
+  - Re-check the Android permission table against the merged release
+    manifest, and the Apple section against ios/Runner/PrivacyInfo.xcprivacy,
+    before each release (store/release-checklist.md).
+  - The Mac and Windows sections describe the planned desktop builds.
+    Re-check them once those builds exist (storage paths, permissions).
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy Policy: GOTTA.BIKE: BLE Watts</title>
+  <meta name="description" content="Privacy policy for GOTTA.BIKE: BLE Watts. No accounts, no ads, no analytics; no personal data collected or shared.">
+  <meta name="theme-color" content="#0e1116">
+  <link rel="canonical" href="https://ble.gotta.bike/privacy">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="assets/icon-64.png" alt="" width="34" height="34">GOTTA.BIKE: BLE Watts</a>
+    <nav class="nav" aria-label="Main">
+      <a href="./#features">Features</a>
+      <a href="./#download">Download</a>
+      <a href="support.html">Support</a>
+      <a href="privacy.html" aria-current="page">Privacy</a>
+      <a href="terms.html">Terms</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="prose">
+  <h1>Privacy Policy</h1>
+  <p class="meta"><strong>Effective date:</strong> <span class="ph">[EFFECTIVE DATE]</span></p>
+
+  <p>This privacy policy describes how the app <strong>GOTTA.BIKE: BLE Watts</strong> ("the app") handles information on every platform it is offered on: iPhone and iPad (App Store), Mac, Android (Google Play) and Windows. The app is published by <span class="ph">[DEVELOPER LEGAL NAME]</span> under the GOTTA.BIKE brand ("we", "us").</p>
+
+  <div class="summary">
+    <h2 id="summary" class="summary-title">Summary</h2>
+    <ul>
+      <li>The app has <strong>no accounts, no ads, no analytics and no tracking</strong>.</li>
+      <li><strong>We do not collect, receive, sell or share any personal data.</strong> The app has no servers and sends nothing to us.</li>
+      <li>Your settings (presets, device identity, test profiles and sensor settings) and any recordings are <strong>stored only on your device</strong>.</li>
+      <li>When you tap <strong>Start</strong>, the app broadcasts <strong>simulated</strong> sensor data over Bluetooth Low Energy (BLE) to nearby devices. Anyone nearby can see that broadcast, so <strong>keep personal information out of the device name</strong>.</li>
+      <li><strong>Dual record</strong> (optional) connects to Bluetooth sensors you choose and can save their readings in a file <strong>on your device</strong>. A recording leaves your device only if you share it.</li>
+    </ul>
+  </div>
+
+  <h2 id="what">What the app does</h2>
+  <p>The app makes your phone, tablet or computer act as a standard Bluetooth LE cycling sensor so you can test cycling apps, bike computers and indoor-training setups. All values it sends (power, cadence, heart rate, speed) are simulated: they are numbers you choose, a scripted test profile, or a ride file you import. <strong>The emulator does not measure anything about you.</strong></p>
+  <p><strong>Dual record</strong> is different: it connects to two Bluetooth sensors that you pick (for example two power meters, or a power meter and a smart trainer) and reads their real measurements, such as power, cadence, speed and heart rate, so you can compare them. The readings are shown on screen and, if you record, saved on your device. Dual record doesn't broadcast anything.</p>
+
+  <h2 id="collect">Information we collect</h2>
+  <p><strong>None.</strong> The app doesn't send any information to us or to any third party. We have no user database, and the app contains no advertising, analytics or crash-reporting software. The Android release build doesn't even request Android's Internet permission.</p>
+
+  <h2 id="device">Information stored on your device</h2>
+  <p>The app saves the following in its own storage on your device, so it is still there the next time you open it:</p>
+  <ul>
+    <li><strong>Presets:</strong> up to five named power and cadence levels.</li>
+    <li><strong>Device identity:</strong> the advertised Bluetooth device name and the manufacturer and model strings.</li>
+    <li><strong>Test profiles:</strong> custom power profiles you create in the profile editor or import from a CSV file you pick, and which profile is selected. The app reads only the file you choose, and keeps just the time, power and cadence values it needs.</li>
+    <li><strong>Sensor and app settings:</strong> which emulated sensors are on and their values, and preferences such as the screen-off broadcasting option.</li>
+    <li><strong>Dual-record recordings:</strong> when you stop a recording, the app saves a CSV file with the readings of the two sensors (time, power, cadence, speed, heart rate and the other values the sensors send), plus each sensor's name and Bluetooth identifier. The file leaves your device only if you tap <strong>Share CSV</strong> and pick an app or place to send it to; what happens then is governed by that app's or service's own privacy policy.</li>
+  </ul>
+  <p>We never receive any of this. You can change or delete presets and profiles in the app. To delete everything, including recordings, uninstall the app (on Android you can also use <strong>Clear storage</strong> in the app's system settings).</p>
+  <p><strong>Device backups.</strong> If you use your platform's backup service, it may include the app's settings and recordings so they can be restored on a new device: iCloud Backup or a computer backup on iPhone and iPad, Time Machine on Mac, and Google's Android backup on Android (end-to-end encrypted with your screen lock on Android 9 and newer). These backups are stored by Apple, Google or on your own drive, under your control. We can't access them.</p>
+
+  <h2 id="broadcast">Bluetooth: what the app broadcasts</h2>
+  <p>The app sends Bluetooth data only after you tap <strong>Start</strong>, and it stops when you tap <strong>Stop</strong>. While it is broadcasting:</p>
+  <ul>
+    <li>It <strong>advertises</strong> the device name you chose (default "GOTTA.BIKE Watts") and the standard sensor services it offers. Any Bluetooth device in range can see the advertisement.</li>
+    <li>On Android, to advertise that name, the app temporarily uses it as <strong>your phone's Bluetooth name</strong> and restores your original name when you tap Stop. If the app is closed unexpectedly while broadcasting, your phone may keep the emulator's name; you can change it back in Android's Bluetooth settings.</li>
+    <li>Apps and devices that <strong>connect</strong> to it can read the manufacturer and model strings you set and receive the simulated sensor values: Cycling Power data (power and crank revolution data, from which receivers calculate cadence) and, if you turn them on in Settings, Heart Rate and Cycling Speed and Cadence data.</li>
+    <li>The app's Bluetooth services don't require pairing, so the data isn't protected from other nearby devices. <strong>Don't put personal information such as your full name in the device name.</strong></li>
+    <li>The app shows how many devices are connected. It doesn't store or send the identifiers of those devices.</li>
+    <li>Your device's Bluetooth address is assigned by the operating system. The app can't read or change it.</li>
+  </ul>
+  <p>What a connected app or device does with the values it receives is governed by that app's or device's own privacy policy.</p>
+
+  <h2 id="dual">Bluetooth: Dual record</h2>
+  <ul>
+    <li>The app <strong>scans</strong> for nearby Bluetooth devices only while the device picker is open, and lists those that offer cycling power, heart rate, speed and cadence or fitness-machine services. The list isn't stored.</li>
+    <li>It <strong>connects</strong> only to the devices you pick and subscribes to their measurements. It reconnects if a link drops, until you disconnect or leave the screen.</li>
+    <li>It keeps the screen on while a sensor is connected or a recording runs.</li>
+    <li>Nothing is sent to the sensors except the standard Bluetooth requests needed to connect and subscribe.</li>
+  </ul>
+
+  <h2 id="permissions">Permissions</h2>
+
+  <h3>iPhone, iPad and Mac</h3>
+  <p>The app asks for <strong>Bluetooth</strong> access the first time it needs it. It uses Bluetooth to act as a cycling sensor that apps and bike computers can connect to, and to connect to your own sensors in Dual record. The app doesn't ask for your location, contacts, photos, camera, microphone, health data or any other permission. On the App Store its privacy label is <strong>Data Not Collected</strong>. The app reads its own saved settings through Apple's standard settings storage (UserDefaults) only.</p>
+  <p>iOS and iPadOS advertise the app's sensor services only while the app is in the foreground. That is an Apple platform rule, not something the app collects or changes.</p>
+
+  <h3>Android</h3>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Permission</th><th>Android versions</th><th>Why the app needs it</th></tr></thead>
+    <tbody>
+      <tr><td><code>BLUETOOTH_ADVERTISE</code> (Nearby devices)</td><td>12 and newer</td><td>To advertise the emulated sensor so other devices can find it. Requested when you first tap Start.</td></tr>
+      <tr><td><code>BLUETOOTH_CONNECT</code> (Nearby devices)</td><td>12 and newer</td><td>To accept connections from apps and devices, send them sensor data, and apply the advertised device name. In Dual record, to connect to the sensors you pick.</td></tr>
+      <tr><td><code>BLUETOOTH_SCAN</code> (Nearby devices)</td><td>12 and newer</td><td>To find nearby sensors while the Dual record device picker is open. Declared with the <code>neverForLocation</code> flag: the app never uses Bluetooth to work out your location, and it doesn't store the list of devices it finds.</td></tr>
+      <tr><td><code>BLUETOOTH</code>, <code>BLUETOOTH_ADMIN</code></td><td>11 and older only</td><td>The older Bluetooth permissions for the same purpose.</td></tr>
+      <tr><td><code>ACCESS_FINE_LOCATION</code> (Location)</td><td>11 and older only</td><td>On Android 11 and older, Android ties Bluetooth LE to the location permission. The app <strong>never reads, stores or shares your location</strong>. On those versions Dual record may also need the phone's Location setting switched on to find sensors. On Android 12 and newer the app doesn't request location at all.</td></tr>
+      <tr><td><code>FOREGROUND_SERVICE</code>, <code>FOREGROUND_SERVICE_CONNECTED_DEVICE</code></td><td>9 and newer; the second on 14 and newer</td><td>Only for the optional screen-off broadcasting feature, so the app can keep sending Bluetooth data to a connected device while the screen is off.</td></tr>
+      <tr><td><code>WAKE_LOCK</code></td><td>All</td><td>Only for the optional screen-off broadcasting feature. It keeps the processor running while the screen is off, and is released when broadcasting stops.</td></tr>
+      <tr><td><code>POST_NOTIFICATIONS</code> (Notifications)</td><td>13 and newer</td><td>Only for the optional screen-off broadcasting feature, to show the notification that tells you the app is still broadcasting. Requested when you turn the option on.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p><strong>Screen on.</strong> While it is broadcasting, the app keeps your screen on as long as the app is open, so the system doesn't pause it. This needs no permission. When you tap Stop, the screen goes back to its normal timeout.</p>
+  <p><strong>Screen-off broadcasting (Android, optional).</strong> If you turn this on in Settings, the app also runs a foreground service and keeps the processor awake while it broadcasts. Android shows a notification with a Stop button while it runs. Enabling it doesn't make the app collect any data.</p>
+
+  <h3>Windows</h3>
+  <p>The app uses Windows' Bluetooth features to broadcast and to connect to the sensors you pick. Windows may ask you to allow Bluetooth access for the app under <strong>Settings › Privacy &amp; security</strong>. The app doesn't use your location, camera, microphone or other personal data.</p>
+
+  <h2 id="third">Third parties</h2>
+  <p>The app doesn't include any third-party advertising, analytics or tracking software, and it doesn't share data with anyone.</p>
+  <p>If you download the app from the App Store or Google Play, Apple or Google operates that store under its own privacy policy. Those stores give developers aggregated statistics (for example download counts) and, from people who chose to share them with developers, crash reports and diagnostics. Apple and Google collect that information, not the app. If you download a Mac or Windows build from GitHub, GitHub's own privacy statement covers the download.</p>
+  <p>This website has no cookies, analytics or tracking scripts. Our host may keep standard server logs (such as IP addresses) for security and operation, under its own privacy policy.</p>
+
+  <h2 id="children">Children</h2>
+  <p>The app is a testing tool and is not directed at children. We don't knowingly collect personal information from anyone, including children.</p>
+
+  <h2 id="security">Security</h2>
+  <p>Your settings and recordings stay in the app's own storage, which your operating system protects from other apps. The app doesn't transmit your data over the internet. Bluetooth broadcasts are unencrypted by design (see above), so don't put anything sensitive into the fields that the app broadcasts.</p>
+
+  <h2 id="retention">Data retention and deletion</h2>
+  <p>We don't hold any of your data, so there is nothing for us to keep or delete. Settings and recordings on your device stay there until you change them or uninstall the app. Copies of recordings you shared are kept wherever you sent them.</p>
+
+  <h2 id="rights">Your choices and rights</h2>
+  <ul>
+    <li>You can deny or revoke Bluetooth (and, on Android, Nearby devices, Location or Notifications) permissions at any time in your device's settings. Without them the app can't broadcast or connect to sensors, or can't show its notification.</li>
+    <li>You can stop broadcasting at any time with the Stop button.</li>
+    <li>Because we hold no personal data about you, there is nothing for us to give you a copy of, correct or delete. If you have a question about your privacy rights under laws such as the GDPR or the CCPA, contact us below.</li>
+  </ul>
+
+  <h2 id="changes">Changes to this policy</h2>
+  <p>If the app's data practices change, for example if a future version adds a feature that needs to send data off your device, we will update this policy and its effective date before that version is released, and update the App Store privacy label and the Google Play Data safety section to match.</p>
+
+  <h2 id="contact">Contact</h2>
+  <p>Questions about this policy or the app:</p>
+  <ul>
+    <li>Email: <span class="ph">[CONTACT EMAIL]</span></li>
+    <li>Developer: <span class="ph">[DEVELOPER LEGAL NAME]</span>, GOTTA.BIKE</li>
+    <li>Postal address: <span class="ph">[POSTAL ADDRESS]</span></li>
+  </ul>
+
+  <p><em>GOTTA.BIKE: BLE Watts is an independent app. It is not affiliated with or endorsed by Zwift, Garmin, Wahoo or the Bluetooth SIG. The Bluetooth® word mark and logos are registered trademarks owned by Bluetooth SIG, Inc.</em></p>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="cols">
+      <div>GOTTA.BIKE: BLE Watts</div>
+      <nav aria-label="Footer">
+        <a href="support.html">Support</a>
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="terms.html">Terms of Use</a>
+        <a href="https://github.com/vincentdavis/GOTTA.BIKE-BLE-Watts">Source code</a>
+      </nav>
+    </div>
+    <p class="fine">© 2026 <span class="ph">[DEVELOPER LEGAL NAME]</span>.</p>
+  </div>
+</footer>
+</body>
+</html>

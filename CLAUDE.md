@@ -147,9 +147,21 @@ records both to a CSV. Record-only, no rebroadcast (yet).
   PLACEHOLDER launcher icons and Play graphics and run
   `flutter_launcher_icons` (dev dependency) safely; never run that tool on
   its own (it corrupts `project.pbxproj`, see the yaml).
-- `store/` — Play listing, privacy policy (`.md` + hosted `.html`, keep in
-  sync), Data safety and content-rating answers, release checklist, and the
-  store graphics. Update them when permissions or features change.
+- `store/` — Play listing, Data safety and content-rating answers, release
+  checklist, and the store graphics. Update them when permissions or
+  features change.
+- `website/` — the product site, https://ble.gotta.bike (Cloudflare Pages,
+  output dir `website`, build command `bash tool/check_website.sh`, which
+  fails while a `[PLACEHOLDER]` is left or a local link is broken). Plain
+  HTML + `styles.css`, no JS (strict CSP in `_headers`, so no inline
+  `style=`). `privacy.html` is THE privacy policy for every platform (App
+  Store, Play, in-app link); `store/privacy-policy.md` only points to it.
+  Also `support.html` (App Store Support URL) and `terms.html`. Setup and
+  placeholders: `website/README.md`.
+- `tool/screenshots/capture_test.dart` — renders
+  `website/assets/screenshots/*.png` from the real widgets with fake BLE
+  (`flutter test tool/screenshots/capture_test.dart --update-goldens`);
+  outside `test/` so CI doesn't run it.
 
 ## Protocol invariants (do not break)
 - CPM packet (`0x2A63`) is little-endian: uint16 flags (`0x0020` = crank data

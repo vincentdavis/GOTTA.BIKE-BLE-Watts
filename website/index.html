@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GOTTA.BIKE: BLE Watts</title>
+  <meta name="description" content="Turn your phone into a Bluetooth LE cycling sensor. Broadcast simulated power, cadence, heart rate and speed to cycling apps and bike computers, or record two real sensors side by side.">
+  <meta name="theme-color" content="#0e1116">
+  <meta property="og:title" content="GOTTA.BIKE: BLE Watts">
+  <meta property="og:description" content="A Bluetooth LE cycling sensor emulator for testing apps, head units and indoor-training setups.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://ble.gotta.bike/assets/og-image.png">
+  <link rel="canonical" href="https://ble.gotta.bike/">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="assets/icon-64.png" alt="" width="34" height="34">GOTTA.BIKE: BLE Watts</a>
+    <nav class="nav" aria-label="Main">
+      <a href="#features">Features</a>
+      <a href="#screenshots">Screenshots</a>
+      <a href="#download">Download</a>
+      <a href="support.html">Support</a>
+      <a href="privacy.html">Privacy</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <span class="eyebrow">Bluetooth LE cycling sensor emulator</span>
+      <h1>Your phone, as a power meter.</h1>
+      <p class="lead">BLE Watts makes your phone act like a standard Bluetooth cycling sensor. Cycling apps, bike computers and BLE tools pair with it like real hardware and receive the power, cadence, heart rate and speed you choose. Test your setup without pedalling a single stroke.</p>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="#download">Download</a>
+        <a class="btn btn-ghost" href="#features">See what it does</a>
+      </div>
+    </div>
+    <div class="shot">
+      <div class="phone"><img src="assets/screenshots/manual.png" alt="The main screen in Manual mode, with power and cadence steppers and preset chips" width="1080" height="2340"></div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <h2>Built for testing, not for faking rides</h2>
+    <p class="sub">For developers, testers and enthusiasts who want repeatable input for head units, cycling apps and indoor-training setups. Every value it sends is simulated: the app does not measure you.</p>
+
+    <div class="grid grid-3">
+      <div class="card">
+        <span class="tag">0x1818</span>
+        <h3>Cycling Power</h3>
+        <p>Instantaneous power plus honest crank revolution data, so receivers work out cadence exactly as they do with a crank-based power meter.</p>
+      </div>
+      <div class="card">
+        <span class="tag">0x180D</span>
+        <h3>Heart Rate</h3>
+        <p>Heart rate with RR intervals. Switch it on in Settings alongside, or instead of, the power sensor.</p>
+      </div>
+      <div class="card">
+        <span class="tag">0x1816</span>
+        <h3>Speed &amp; Cadence</h3>
+        <p>Wheel speed from a speed and wheel size you set, plus crank cadence that matches the power sensor tick for tick.</p>
+      </div>
+      <div class="card">
+        <h3>Manual mode</h3>
+        <p>Big plus and minus steppers for power (0 to 800 W), cadence, speed and heart rate, with up to five one-tap presets.</p>
+      </div>
+      <div class="card">
+        <h3>Test profiles</h3>
+        <p>Play scripted power profiles with steps, ramps and coasts, identical on every run, with a live chart and playhead. Build your own in the editor.</p>
+      </div>
+      <div class="card">
+        <h3>Replay a ride</h3>
+        <p>Import a CSV with time and power (and cadence if you have it), up to six hours, and play it back second by second.</p>
+      </div>
+      <div class="card">
+        <h3>Dual record</h3>
+        <p>Connect to two real sensors at once, such as two power meters or a power meter and a smart trainer, see them side by side and record both to a CSV you can share.</p>
+      </div>
+      <div class="card">
+        <h3>CdA, Crr and mass profiles</h3>
+        <p>Built-in profiles designed to help estimate the drag, rolling resistance and effective mass a virtual-riding app gives an equipment setup.</p>
+      </div>
+      <div class="card">
+        <h3>Your sensor's identity</h3>
+        <p>Choose the advertised name, manufacturer and model. See how many apps are connected, and start or stop with one button.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="screenshots" class="alt">
+  <div class="wrap">
+    <h2>Screenshots</h2>
+    <p class="sub">The same app on every platform: a dark, glanceable screen you can read from the saddle or the workbench.</p>
+    <div class="shots">
+      <figure>
+        <div class="phone"><img src="assets/screenshots/manual.png" alt="Manual mode: power and cadence steppers with preset chips" loading="lazy" width="1080" height="2340"></div>
+        <figcaption>Manual mode: dial in power and cadence, or tap a preset.</figcaption>
+      </figure>
+      <figure>
+        <div class="phone"><img src="assets/screenshots/test-profile.png" alt="Test-profile mode: a power-versus-time chart with a playhead" loading="lazy" width="1080" height="2340"></div>
+        <figcaption>Test profiles: a scripted run with a live chart.</figcaption>
+      </figure>
+      <figure>
+        <div class="phone"><img src="assets/screenshots/profile-editor.png" alt="The profile editor with a list of timed segments" loading="lazy" width="1080" height="2340"></div>
+        <figcaption>Profile editor: steps, ramps and coasts.</figcaption>
+      </figure>
+      <figure>
+        <div class="phone"><img src="assets/screenshots/dual-record.png" alt="Dual record: two sensor cards side by side with a comparison" loading="lazy" width="1080" height="2340"></div>
+        <figcaption>Dual record: compare two real sensors.</figcaption>
+      </figure>
+      <figure>
+        <div class="phone"><img src="assets/screenshots/settings.png" alt="Settings: sensor switches and device identity" loading="lazy" width="1080" height="2340"></div>
+        <figcaption>Settings: choose sensors and the device name.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section id="download">
+  <div class="wrap">
+    <h2>Download</h2>
+    <p class="sub">Free, with no account, no ads and no tracking.</p>
+    <div class="grid grid-4 dl">
+      <div class="card">
+        <h3>iPhone &amp; iPad</h3>
+        <p>From the App Store. Requires iOS or iPadOS 27 or later and Bluetooth LE.</p>
+        <a class="btn btn-primary" href="[APP STORE URL]">App Store</a>
+        <span class="status">Coming soon</span>
+      </div>
+      <div class="card">
+        <h3>Android</h3>
+        <p>From Google Play. Phones and tablets with Bluetooth LE advertising (peripheral mode).</p>
+        <a class="btn btn-primary" href="https://play.google.com/store/apps/details?id=ble.make.bike.gotta">Google Play</a>
+        <span class="status">Coming soon</span>
+      </div>
+      <div class="card">
+        <h3>Mac</h3>
+        <p>A direct download for Apple silicon Macs running macOS 27 or later, notarized by Apple.</p>
+        <a class="btn btn-outline" href="https://github.com/vincentdavis/GOTTA.BIKE-BLE-Watts/releases/latest/download/gotta-bike-ble-watts-macos.dmg">Download for Mac (.dmg)</a>
+        <span class="status">Coming soon</span>
+      </div>
+      <div class="card">
+        <h3>Windows</h3>
+        <p>A direct download for Windows 10 and 11 from our GitHub releases.</p>
+        <a class="btn btn-outline" href="https://github.com/vincentdavis/GOTTA.BIKE-BLE-Watts/releases/latest">Download for Windows</a>
+        <span class="status">Coming soon</span>
+      </div>
+    </div>
+    <p class="status note-below">Each GitHub release lists SHA-256 checksums for its files. Your device's Bluetooth hardware must support advertising (peripheral mode) to broadcast; the app tells you if it doesn't. Features can differ by platform.</p>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <h2>Works with standard BLE receivers</h2>
+    <p class="sub">BLE Watts follows the standard Bluetooth LE sensor profiles, so it is meant for any app or bike computer that accepts standard BLE sensors. Cycling Power output has been tested with popular cycling apps and BLE debugging tools. Whether it works depends on the receiving app or device.</p>
+    <div class="notice">
+      <p><strong>Responsible use.</strong> This app creates simulated sensor data for testing. Don't use it to record, upload or submit rides, races, results or leaderboard efforts as if they were real, and follow the rules of every platform you connect it to. See the <a href="terms.html">Terms of Use</a>.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Privacy, in one line</h2>
+    <p class="sub">We don't collect anything. No accounts, no ads, no analytics. Your presets, profiles and recordings stay on your device. <a href="privacy.html">Read the privacy policy</a>.</p>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="cols">
+      <div>GOTTA.BIKE: BLE Watts</div>
+      <nav aria-label="Footer">
+        <a href="support.html">Support</a>
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="terms.html">Terms of Use</a>
+        <a href="https://github.com/vincentdavis/GOTTA.BIKE-BLE-Watts">Source code</a>
+      </nav>
+    </div>
+    <p class="fine">© 2026 <span class="ph">[DEVELOPER LEGAL NAME]</span>. GOTTA.BIKE: BLE Watts is an independent app, not affiliated with or endorsed by Zwift, Garmin, Wahoo, Nordic Semiconductor or the Bluetooth SIG. The Bluetooth® word mark and logos are registered trademarks owned by Bluetooth SIG, Inc. Apple, the Apple logo, iPhone, iPad and Mac are trademarks of Apple Inc. App Store is a service mark of Apple Inc. Google Play and the Google Play logo are trademarks of Google LLC. Windows is a trademark of the Microsoft group of companies.</p>
+  </div>
+</footer>
+</body>
+</html>

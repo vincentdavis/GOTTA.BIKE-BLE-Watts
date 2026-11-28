@@ -25,8 +25,8 @@ applicationId `ble.make.bike.gotta`). Paste the text blocks below into
 | Category | **Tools** (recommended) | n/a | n/a |
 | Tags | up to 5 from Google's list | 5 | n/a |
 | Contact email | `[CONTACT EMAIL]` (required, shown publicly) | n/a | n/a |
-| Website | `[WEBSITE URL]`, probably `https://gotta.bike` (owner to confirm) | n/a | n/a |
-| Privacy policy URL | `[PRIVACY POLICY URL]`, where `store/privacy-policy.html` is hosted | n/a | n/a |
+| Website | `https://ble.gotta.bike` (`website/`, Cloudflare Pages) | n/a | n/a |
+| Privacy policy URL | `https://ble.gotta.bike/privacy` (`website/privacy.html`) | n/a | n/a |
 
 The limits come from Play Console Help: app name 30, short description 80,
 full description 4000 characters
@@ -180,7 +180,7 @@ text from the full description:
 
 Alternate B names heart rate and speed, so drop it too if either sensor
 goes. After any edit, re-run the count script and update
-`store/privacy-policy.md`, `store/privacy-policy.html` and
+`website/privacy.html` and
 `store/release-checklist.md` to match.
 
 ## Category
@@ -254,11 +254,10 @@ address is required. Phone and website are optional
 ([developer account information](https://support.google.com/googleplay/android-developer/answer/13634081)).
 
 - Email: `[CONTACT EMAIL]`. Use a role address you are happy to publish.
-- Website: `[WEBSITE URL]`. The brand is GOTTA.BIKE; confirm that
-  `https://gotta.bike` is the right site and that it is live.
-- Privacy policy: `[PRIVACY POLICY URL]`. Host `store/privacy-policy.html` on
-  a public, non-geofenced URL (no PDF), for example GitHub Pages. See
-  `store/release-checklist.md`.
+- Website: `https://ble.gotta.bike`, the product site in `website/`
+  (Cloudflare Pages, see `website/README.md`).
+- Privacy policy: `https://ble.gotta.bike/privacy` (`website/privacy.html`),
+  a public, non-geofenced HTML page. See `store/release-checklist.md`.
 
 ## Other store settings
 

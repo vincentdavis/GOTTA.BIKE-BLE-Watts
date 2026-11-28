@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://ble.gotta.bike/sitemap.xml

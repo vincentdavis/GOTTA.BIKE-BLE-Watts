@@ -319,7 +319,8 @@ class ProfileChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final chart = SizedBox(
       height: height,
       width: double.infinity,
@@ -334,6 +335,7 @@ class ProfileChart extends StatelessWidget {
           playheadColor: scheme.secondary,
           gridColor: scheme.onSurface.withValues(alpha: 0.12),
           labelColor: scheme.onSurface.withValues(alpha: 0.6),
+          labelFontFamily: theme.textTheme.labelSmall?.fontFamily,
         ),
       ),
     );
@@ -356,6 +358,7 @@ class _ProfilePainter extends CustomPainter {
     required this.playheadColor,
     required this.gridColor,
     required this.labelColor,
+    this.labelFontFamily,
   });
 
   final PowerProfile profile;
@@ -367,6 +370,10 @@ class _ProfilePainter extends CustomPainter {
   final Color playheadColor;
   final Color gridColor;
   final Color labelColor;
+
+  /// The theme's font for the axis labels (a bare [TextStyle] would not
+  /// follow the app's typography).
+  final String? labelFontFamily;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -526,7 +533,11 @@ class _ProfilePainter extends CustomPainter {
     final tp = TextPainter(
       text: TextSpan(
         text: text,
-        style: TextStyle(color: color, fontSize: 10),
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontFamily: labelFontFamily,
+        ),
       ),
       textDirection: TextDirection.ltr,
     )..layout();

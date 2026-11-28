@@ -21,7 +21,7 @@ non-exported `FileProvider` and a broadcast receiver).
 | Data collection and security | Encryption in transit / data deletion questions | Not asked when the answer above is **No** (see note 2) |
 | Data types | Which data types are collected or shared? | **None** (nothing to select) |
 | Data usage and handling | Purposes, optional/required, ephemeral processing | **Not applicable** |
-| Privacy policy (App content) | Privacy policy URL | `[PRIVACY POLICY URL]`, the hosted `store/privacy-policy.html` |
+| Privacy policy (App content) | Privacy policy URL | `https://ble.gotta.bike/privacy` (`website/privacy.html`) |
 | Preview | Expected store label | "No data collected" and "No data shared with third parties" |
 
 Google's help page says: "If your app collects or shares any of the required
@@ -175,7 +175,7 @@ shortened here and may be worded slightly differently in Play Console.
    is transmitted to us, and users delete local data by clearing the app's
    storage or uninstalling.
 3. **Keep the privacy policy consistent.** The Data safety answers,
-   `store/privacy-policy.html` and the in-app privacy-policy link have to
+   `website/privacy.html` and the in-app privacy-policy link have to
    agree. Google's User Data policy requires "a privacy policy link or text
    within the app itself", in addition to the Play Console field
    ([User Data policy](https://support.google.com/googleplay/android-developer/answer/10144311)).

@@ -1,0 +1,6 @@
+# Cloudflare Pages redirects (https://developers.cloudflare.com/pages/configuration/redirects/).
+# Short, stable links for store listings and the app.
+/privacy-policy  /privacy  301
+/tos             /terms    301
+/mac             https://github.com/vincentdavis/GOTTA.BIKE-BLE-Watts/releases/latest/download/gotta-bike-ble-watts-macos.dmg 302
+/releases        https://github.com/vincentdavis/GOTTA.BIKE-BLE-Watts/releases/latest 302
