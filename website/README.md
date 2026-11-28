@@ -25,16 +25,18 @@ Cloudflare build command, so a deploy can't go out with them).
 
 | Placeholder | Where | Notes |
 |---|---|---|
-| `[CONTACT EMAIL]` | privacy, terms, support | Shown publicly; Apple's Support URL must lead to real contact info. A role address such as `support@gotta.bike` works well. |
 | `[DEVELOPER LEGAL NAME]` | every footer, privacy, terms | Must match the seller / developer name on App Store Connect and Play Console. |
-| `[POSTAL ADDRESS]` | privacy | Optional for a personal developer account; delete the line if you don't want it. |
 | `[EFFECTIVE DATE]` | privacy, terms | The date you publish. |
 | `[GOVERNING LAW JURISDICTION]` | terms | For example "the State of Colorado, USA". |
-| `[RESPONSE TIME, e.g. 3 business days]` | support | Or delete that sentence. |
-| `[APP STORE URL]` | index | `https://apps.apple.com/app/id<APPLE ID>` once App Store Connect assigns the Apple ID. |
 
-Also, when each store build goes live, delete its "Coming soon" line in the
-Download section of `index.html`. The Google Play link
+The contact email is `ble-watts@gotta.bike` (all pages, `mailto:` links).
+
+When each store build goes live, delete its "Coming soon" line in the
+Download section of `index.html`. The App Store button is a plain
+`<span class="btn-soon">` until then: turn it into a link to
+`https://apps.apple.com/app/id<APPLE ID>` once App Store Connect assigns
+the Apple ID (the site has to be live before that, since Apple asks for the
+Support and Privacy URLs first). The Google Play link
 (`ble.make.bike.gotta`) and the Mac link
 (`releases/latest/download/gotta-bike-ble-watts-macos.dmg`) are already
 the final URLs, but they only work once the app is published there. The

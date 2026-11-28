@@ -220,4 +220,7 @@ th { background: var(--bg-alt); }
 
 /* Small helpers (the CSP forbids inline style attributes). */
 .note-below { margin-top: 1.25rem; }
+/* A store button whose listing isn't live yet: shown, not clickable. */
+.btn-soon { opacity: .55; cursor: default; }
+.btn-soon:hover { background: var(--accent-bg); }
 .prose .summary h2.summary-title { border: 0; margin-top: 1rem; padding-top: 0; }
