@@ -25,11 +25,12 @@ Cloudflare build command, so a deploy can't go out with them).
 
 | Placeholder | Where | Notes |
 |---|---|---|
-| `[DEVELOPER LEGAL NAME]` | every footer, privacy, terms | Must match the seller / developer name on App Store Connect and Play Console. |
 | `[EFFECTIVE DATE]` | privacy, terms | The date you publish. |
 | `[GOVERNING LAW JURISDICTION]` | terms | For example "the State of Colorado, USA". |
 
-The contact email is `ble-watts@gotta.bike` (all pages, `mailto:` links).
+The contact email is `ble-watts@gotta.bike` (all pages, `mailto:` links)
+and the developer is **Vincent Davis** (must match the developer name on
+App Store Connect and Play Console).
 
 When each store build goes live, delete its "Coming soon" line in the
 Download section of `index.html`. The App Store button is a plain
