@@ -7,7 +7,8 @@ macOS app (`macos/`) share the bundle ID `ble.watts.bike.gotta`. Minimum OS:
 with Xcode 27 or later (like Android, nothing is signed on GitHub).
 
 The Mac download outside the App Store (Developer ID, notarized) is a
-separate build with its own entitlements; it uses the same bundle ID.
+separate build with its own entitlements; it uses the same bundle ID. See
+`macos-direct-download.md`.
 
 Rules change: re-check anything marked **verify** in App Store Connect
 before you rely on it.
