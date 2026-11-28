@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'device_identity.dart';
 import 'presets.dart';
+import 'responsive.dart';
 import 'sensor_config.dart';
 
 /// Settings screen: the emulated sensors, screen-off broadcasting, the BLE
@@ -97,7 +98,7 @@ class _SettingsPageState extends State<SettingsPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: contentPadding(context, const EdgeInsets.all(16)),
         children: [
           if (widget.onSensorsChanged != null) ...[
             _SensorsSection(
@@ -135,7 +136,7 @@ class _SettingsPageState extends State<SettingsPage> {
           const SizedBox(height: 4),
           Text(
             'How the sensor appears to Zwift and other apps. Cosmetic — it does '
-            'not affect measurements. The MAC address is set by the phone and '
+            'not affect measurements. The MAC address is set by the device and '
             'cannot be changed.',
             style: theme.textTheme.bodySmall,
           ),

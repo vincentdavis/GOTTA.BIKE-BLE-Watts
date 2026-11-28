@@ -44,6 +44,11 @@ void main() {
   testWidgets('renders identity fields + presets, and edits emit identity', (
     tester,
   ) async {
+    // Tall enough that the lazily built list reaches the presets now that
+    // the 800-wide test window's content is capped at kMaxContentWidth.
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     DeviceIdentity? changed;
     await tester.pumpWidget(
       MaterialApp(

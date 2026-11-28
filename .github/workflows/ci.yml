@@ -1,5 +1,6 @@
 # Checks every push to main and every pull request: formatting, analyzer,
-# tests, a release-mode APK build, and the analysis script's self-test.
+# tests, a release-mode APK build, unsigned iOS-simulator and macOS debug
+# builds, and the analysis script's self-test.
 # The APK here is signed with a throwaway debug key, so it is for quick
 # testing only; signed releases come from release.yml.
 name: CI
@@ -58,6 +59,33 @@ jobs:
           name: apk-debug-signed-${{ github.sha }}
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 14
+
+  apple:
+    name: Build iOS (simulator) + macOS
+    # The apps target iOS / iPadOS / macOS 27, so this needs Xcode 27+.
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - run: flutter pub get
+
+      # Unsigned debug builds: they prove the Xcode projects, deployment
+      # targets, entitlements and plugins compile. App Store builds are
+      # archived and signed locally (see store/apple-app-store.md).
+      - run: flutter build ios --simulator --debug
+
+      - run: flutter build macos --debug
 
   analysis:
     name: Analysis self-test

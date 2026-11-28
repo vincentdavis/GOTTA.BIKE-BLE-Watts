@@ -12,6 +12,7 @@ import 'presets.dart';
 import 'profile_picker.dart';
 import 'profile_player.dart';
 import 'profile_store.dart';
+import 'responsive.dart';
 import 'screen_off_mode.dart';
 import 'sensor_config.dart';
 import 'settings_page.dart';
@@ -524,7 +525,7 @@ class _EmulatorPageState extends State<EmulatorPage> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: contentPadding(context, const EdgeInsets.all(20)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -705,7 +706,10 @@ class _BroadcastBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+          padding: contentPadding(
+            context,
+            const EdgeInsets.fromLTRB(16, 10, 16, 12),
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -14,6 +14,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'dual_recorder.dart';
 import 'recording_files.dart';
+import 'responsive.dart';
 import 'sensor_central.dart';
 import 'sensor_decoders.dart';
 
@@ -280,6 +281,18 @@ class _DualRecordPageState extends State<DualRecordPage> {
     }
   }
 
+  Future<void> _saveAs() async {
+    final path = _savedPath;
+    if (path == null) return;
+    try {
+      final saved = await widget.files.saveAs(path);
+      if (saved == null || !mounted) return;
+      setState(() => _status = 'Saved to $saved.');
+    } catch (e) {
+      if (mounted) setState(() => _status = 'Saving failed: $e');
+    }
+  }
+
   Future<void> _confirmLeave() async {
     final leave = await showDialog<bool>(
       context: context,
@@ -318,7 +331,7 @@ class _DualRecordPageState extends State<DualRecordPage> {
       child: Scaffold(
         appBar: AppBar(title: const Text('Dual record')),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: contentPadding(context, const EdgeInsets.all(16)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -374,12 +387,20 @@ class _DualRecordPageState extends State<DualRecordPage> {
                     label: const Text('Share CSV'),
                   ),
                 ),
+                if (widget.files.canSaveAs) ...[
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: _saveAs,
+                    icon: const Icon(Icons.save_alt),
+                    label: const Text('Save CSV as…'),
+                  ),
+                ],
               ],
               const SizedBox(height: 12),
               Text(_status, style: theme.textTheme.bodySmall),
               const SizedBox(height: 8),
               Text(
-                'Recordings are saved on this phone. Each CSV row is one '
+                'Recordings are saved on this device. Each CSV row is one '
                 'notification from A or B with a UTC timestamp; nothing is '
                 'rebroadcast. Keep this screen open while recording.',
                 style: theme.textTheme.bodySmall?.copyWith(
