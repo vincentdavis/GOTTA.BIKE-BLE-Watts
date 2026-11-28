@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'layout.dart';
 import 'limits.dart';
 import 'power_profile.dart';
 import 'profile_player.dart';
@@ -237,24 +238,31 @@ class _ProfileEditorPageState extends State<ProfileEditorPage> {
               ),
             ],
           ),
-          body: ReorderableListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-            buildDefaultDragHandles: false,
-            header: _buildHeader(theme, draft),
-            footer: _buildFooter(),
-            itemCount: _entries.length,
-            onReorderItem: _moveSegment,
-            itemBuilder: (context, index) {
-              final entry = _entries[index];
-              return _SegmentTile(
-                key: ValueKey<int>(entry.key),
-                index: index,
-                segment: entry.segment,
-                startSec: starts[index],
-                onTap: () => _editSegment(entry),
-                onDelete: () => _deleteSegment(index),
-              );
-            },
+          body: LayoutBuilder(
+            builder: (context, constraints) => ReorderableListView.builder(
+              padding: readablePadding(
+                context,
+                constraints.maxWidth,
+                base: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                maxWidth: kWideContentMaxWidth,
+              ),
+              buildDefaultDragHandles: false,
+              header: _buildHeader(theme, draft),
+              footer: _buildFooter(),
+              itemCount: _entries.length,
+              onReorderItem: _moveSegment,
+              itemBuilder: (context, index) {
+                final entry = _entries[index];
+                return _SegmentTile(
+                  key: ValueKey<int>(entry.key),
+                  index: index,
+                  segment: entry.segment,
+                  startSec: starts[index],
+                  onTap: () => _editSegment(entry),
+                  onDelete: () => _deleteSegment(index),
+                );
+              },
+            ),
           ),
         ),
       ),

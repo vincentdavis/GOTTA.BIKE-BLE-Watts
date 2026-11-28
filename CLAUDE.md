@@ -103,6 +103,11 @@ records both to a CSV. Record-only, no rebroadcast (yet).
   Manufacturer/Model for the DIS) + `DeviceIdentityStore` (`shared_preferences`),
   plus the advertisement name budget (`advertisedNameBudget`,
   `fitAdvertisedName`). The MAC address is OS-assigned and not settable.
+- `lib/layout.dart` — large-screen layout: `readablePadding` (centres a
+  page's scroll view at `kContentMaxWidth` 720 dp, or `kWideContentMaxWidth`
+  960 for Dual record and the profile editor, and adds the side/bottom
+  system insets) and `ReadableWidth` for non-scrolling bars. Use it for
+  every new page body so tablets, foldables and landscape stay readable.
 - `lib/limits.dart` — pure shared bounds (`kPowerMax`, `kCadenceMax`);
   `presets.dart` re-exports it. Pure files must import this, not
   `presets.dart` (which pulls in `shared_preferences`).
@@ -230,6 +235,16 @@ records both to a CSV. Record-only, no rebroadcast (yet).
 - iOS advertises standard 16-bit service UUIDs only in the FOREGROUND; a
   backgrounded iPhone is invisible to non-Apple centrals. Do not try to "fix"
   background discovery — it is an OS limitation, not a bug.
+- Android SDK levels are pinned in `android/app/build.gradle.kts`
+  (`minSdk = 24`, `targetSdk = 36`, Play's requirement since 2026-08-31),
+  not Flutter's defaults. Raise `targetSdk` deliberately each year and
+  re-test on a tablet and a foldable (API 37 drops the large-screen
+  orientation/resizability opt-outs). The manifest marks location, GPS and
+  touchscreen optional so Play doesn't hide the app from Wi-Fi-only
+  tablets and Chromebooks; only `bluetooth_le` is required. Keep
+  `configChanges` incl. `screenSize|smallestScreenSize|screenLayout`: the
+  broadcast lives in the activity's engine, so a fold/unfold or rotation
+  must not recreate it.
 - Android requires chipset advertiser support; check
   `UniversalBlePeripheral.getCapabilities().supportsPeripheralMode` at runtime.
 - A backgrounded / screen-off Flutter app is suspended by Android: the 500 ms

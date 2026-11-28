@@ -13,6 +13,7 @@ import 'package:universal_ble/universal_ble.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'dual_recorder.dart';
+import 'layout.dart';
 import 'recording_files.dart';
 import 'sensor_central.dart';
 import 'sensor_decoders.dart';
@@ -317,76 +318,84 @@ class _DualRecordPageState extends State<DualRecordPage> {
       },
       child: Scaffold(
         appBar: AppBar(title: const Text('Dual record')),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (final slot in RecordSlot.values) ...[
-                      if (slot != RecordSlot.a) const SizedBox(width: 8),
-                      Expanded(
-                        child: _SlotCard(
-                          key: ValueKey('slot-${slot.label}'),
-                          slot: slot,
-                          state: _slots[slot],
-                          recording: recording,
-                          samples: _recorder.count(slot),
-                          onChoose: () => _choose(slot),
-                          onDisconnect: () => _disconnect(slot),
+        body: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            padding: readablePadding(
+              context,
+              constraints.maxWidth,
+              maxWidth: kWideContentMaxWidth,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final slot in RecordSlot.values) ...[
+                        if (slot != RecordSlot.a) const SizedBox(width: 8),
+                        Expanded(
+                          child: _SlotCard(
+                            key: ValueKey('slot-${slot.label}'),
+                            slot: slot,
+                            state: _slots[slot],
+                            recording: recording,
+                            samples: _recorder.count(slot),
+                            onChoose: () => _choose(slot),
+                            onDisconnect: () => _disconnect(slot),
+                          ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              if (hasData) ...[
-                _ComparisonCard(
-                  comparison: _recorder.comparison(),
-                  elapsed: _recorder.elapsed(_now()),
+                  ),
                 ),
                 const SizedBox(height: 16),
-              ],
-              FilledButton.icon(
-                key: const ValueKey('record-button'),
-                onPressed: _saving
-                    ? null
-                    : recording
-                    ? _stopRecording
-                    : (_slots.isEmpty ? null : _startRecording),
-                icon: Icon(recording ? Icons.stop : Icons.fiber_manual_record),
-                label: Text(recording ? 'Stop recording' : 'Start recording'),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: recording ? Colors.red.shade700 : null,
+                if (hasData) ...[
+                  _ComparisonCard(
+                    comparison: _recorder.comparison(),
+                    elapsed: _recorder.elapsed(_now()),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                FilledButton.icon(
+                  key: const ValueKey('record-button'),
+                  onPressed: _saving
+                      ? null
+                      : recording
+                      ? _stopRecording
+                      : (_slots.isEmpty ? null : _startRecording),
+                  icon: Icon(
+                    recording ? Icons.stop : Icons.fiber_manual_record,
+                  ),
+                  label: Text(recording ? 'Stop recording' : 'Start recording'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: recording ? Colors.red.shade700 : null,
+                  ),
                 ),
-              ),
-              if (_savedPath != null && !recording) ...[
+                if (_savedPath != null && !recording) ...[
+                  const SizedBox(height: 8),
+                  Builder(
+                    builder: (buttonContext) => OutlinedButton.icon(
+                      onPressed: () => _share(buttonContext),
+                      icon: const Icon(Icons.ios_share),
+                      label: const Text('Share CSV'),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Text(_status, style: theme.textTheme.bodySmall),
                 const SizedBox(height: 8),
-                Builder(
-                  builder: (buttonContext) => OutlinedButton.icon(
-                    onPressed: () => _share(buttonContext),
-                    icon: const Icon(Icons.ios_share),
-                    label: const Text('Share CSV'),
+                Text(
+                  'Recordings are saved on this phone. Each CSV row is one '
+                  'notification from A or B with a UTC timestamp; nothing is '
+                  'rebroadcast. Keep this screen open while recording.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.hintColor,
                   ),
                 ),
               ],
-              const SizedBox(height: 12),
-              Text(_status, style: theme.textTheme.bodySmall),
-              const SizedBox(height: 8),
-              Text(
-                'Recordings are saved on this phone. Each CSV row is one '
-                'notification from A or B with a UTC timestamp; nothing is '
-                'rebroadcast. Keep this screen open while recording.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.hintColor,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

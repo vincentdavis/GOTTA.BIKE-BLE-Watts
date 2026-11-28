@@ -271,30 +271,44 @@ class _SegmentRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: active ? Border.all(color: scheme.primary, width: 1.5) : null,
       ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 84,
-            child: Text(
-              range,
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
+      // On a narrow screen (a foldable's cover screen, large text) the
+      // power label goes under the title instead of squeezing it.
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final title = Text(
+            segmentTitle(segment, index),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: active ? FontWeight.bold : FontWeight.normal,
             ),
-          ),
-          Expanded(
-            child: Text(
-              segmentTitle(segment, index),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: active ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          ),
-          Text(
+          );
+          final detail = Text(
             '${segment.powerLabel}${segment.isCoast ? '' : ' · ${segment.cadence} rpm'}',
             style: theme.textTheme.bodySmall,
-          ),
-        ],
+          );
+          final narrow = constraints.maxWidth < 300;
+          return Row(
+            children: [
+              SizedBox(
+                width: 84,
+                child: Text(
+                  range,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: narrow
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [title, detail],
+                      )
+                    : title,
+              ),
+              if (!narrow) detail,
+            ],
+          );
+        },
       ),
     );
   }
