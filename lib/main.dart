@@ -7,6 +7,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'cps_peripheral.dart';
 import 'device_identity.dart';
 import 'dual_record_page.dart';
+import 'layout.dart';
 import 'power_profile.dart';
 import 'presets.dart';
 import 'profile_picker.dart';
@@ -523,145 +524,153 @@ class _EmulatorPageState extends State<EmulatorPage> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _ReadoutCard(
-              power: s.cyclingPower ? shownPower : null,
-              cadence: (s.cyclingPower || s.speedCadence) ? shownCadence : null,
-              heartRate: s.heartRate ? s.heartRateBpm : null,
-              speed: s.speedCadence ? s.speedKmh : null,
-              subscribers: _subscribers,
-              advertising: _advertising,
-            ),
-            const SizedBox(height: 20),
-            SegmentedButton<_Mode>(
-              segments: const [
-                ButtonSegment(
-                  value: _Mode.manual,
-                  label: Text('Manual'),
-                  icon: Icon(Icons.tune),
-                ),
-                ButtonSegment(
-                  value: _Mode.profile,
-                  label: Text('Test profile'),
-                  icon: Icon(Icons.timeline),
-                ),
-              ],
-              selected: {_mode},
-              onSelectionChanged: _profileRunning
-                  ? null
-                  : (s) => setState(() => _mode = s.first),
-            ),
-            const SizedBox(height: 20),
-            if (_mode == _Mode.manual) ...[
-              if (s.cyclingPower && _presets.isNotEmpty) ...[
-                _PresetBar(
-                  presets: _presets,
-                  currentPower: _power.round(),
-                  currentCadence: _cadence.round(),
-                  onSelected: _applyPreset,
-                ),
-                const SizedBox(height: 20),
-              ],
-              // Keys keep each stepper's press-and-hold state with its own
-              // value when sensors are switched on or off.
-              if (s.cyclingPower) ...[
-                _AdjustControl(
-                  key: const ValueKey('adjust-power'),
-                  label: 'Power',
-                  unit: 'W',
-                  value: _power,
-                  min: 0,
-                  max: kPowerMax.toDouble(),
-                  step: 5,
-                  onChanged: (v) => setState(() => _power = v),
-                ),
-                const SizedBox(height: 10),
-              ],
-              if (s.cyclingPower || s.speedCadence) ...[
-                _AdjustControl(
-                  key: const ValueKey('adjust-cadence'),
-                  label: 'Cadence',
-                  unit: 'rpm',
-                  value: _cadence,
-                  min: 0,
-                  max: kCadenceMax.toDouble(),
-                  step: 1,
-                  onChanged: (v) => setState(() => _cadence = v),
-                ),
-                const SizedBox(height: 10),
-              ],
-              if (s.speedCadence) ...[
-                _AdjustControl(
-                  key: const ValueKey('adjust-speed'),
-                  label: 'Speed',
-                  unit: 'km/h',
-                  value: s.speedKmh.toDouble(),
-                  min: 0,
-                  max: kSpeedMaxKmh.toDouble(),
-                  step: 1,
-                  onChanged: (v) =>
-                      _setManualSensors(s.copyWith(speedKmh: v.round())),
-                ),
-                const SizedBox(height: 10),
-              ],
-              if (s.heartRate)
-                _AdjustControl(
-                  key: const ValueKey('adjust-heart-rate'),
-                  label: 'Heart rate',
-                  unit: 'bpm',
-                  value: s.heartRateBpm.toDouble(),
-                  min: kHeartRateMin.toDouble(),
-                  max: kHeartRateMax.toDouble(),
-                  step: 1,
-                  onChanged: (v) =>
-                      _setManualSensors(s.copyWith(heartRateBpm: v.round())),
-                ),
-            ] else ...[
-              if (!s.cyclingPower)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(
-                    'Cycling Power is off (Settings › Sensors), so the '
-                    'profile’s power is not broadcast; its cadence still '
-                    'drives Speed & Cadence.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.error,
+      body: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          padding: readablePadding(
+            context,
+            constraints.maxWidth,
+            base: const EdgeInsets.all(20),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _ReadoutCard(
+                power: s.cyclingPower ? shownPower : null,
+                cadence: (s.cyclingPower || s.speedCadence)
+                    ? shownCadence
+                    : null,
+                heartRate: s.heartRate ? s.heartRateBpm : null,
+                speed: s.speedCadence ? s.speedKmh : null,
+                subscribers: _subscribers,
+                advertising: _advertising,
+              ),
+              const SizedBox(height: 20),
+              SegmentedButton<_Mode>(
+                segments: const [
+                  ButtonSegment(
+                    value: _Mode.manual,
+                    label: Text('Manual'),
+                    icon: Icon(Icons.tune),
+                  ),
+                  ButtonSegment(
+                    value: _Mode.profile,
+                    label: Text('Test profile'),
+                    icon: Icon(Icons.timeline),
+                  ),
+                ],
+                selected: {_mode},
+                onSelectionChanged: _profileRunning
+                    ? null
+                    : (s) => setState(() => _mode = s.first),
+              ),
+              const SizedBox(height: 20),
+              if (_mode == _Mode.manual) ...[
+                if (s.cyclingPower && _presets.isNotEmpty) ...[
+                  _PresetBar(
+                    presets: _presets,
+                    currentPower: _power.round(),
+                    currentCadence: _cadence.round(),
+                    onSelected: _applyPreset,
+                  ),
+                  const SizedBox(height: 20),
+                ],
+                // Keys keep each stepper's press-and-hold state with its own
+                // value when sensors are switched on or off.
+                if (s.cyclingPower) ...[
+                  _AdjustControl(
+                    key: const ValueKey('adjust-power'),
+                    label: 'Power',
+                    unit: 'W',
+                    value: _power,
+                    min: 0,
+                    max: kPowerMax.toDouble(),
+                    step: 5,
+                    onChanged: (v) => setState(() => _power = v),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                if (s.cyclingPower || s.speedCadence) ...[
+                  _AdjustControl(
+                    key: const ValueKey('adjust-cadence'),
+                    label: 'Cadence',
+                    unit: 'rpm',
+                    value: _cadence,
+                    min: 0,
+                    max: kCadenceMax.toDouble(),
+                    step: 1,
+                    onChanged: (v) => setState(() => _cadence = v),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                if (s.speedCadence) ...[
+                  _AdjustControl(
+                    key: const ValueKey('adjust-speed'),
+                    label: 'Speed',
+                    unit: 'km/h',
+                    value: s.speedKmh.toDouble(),
+                    min: 0,
+                    max: kSpeedMaxKmh.toDouble(),
+                    step: 1,
+                    onChanged: (v) =>
+                        _setManualSensors(s.copyWith(speedKmh: v.round())),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                if (s.heartRate)
+                  _AdjustControl(
+                    key: const ValueKey('adjust-heart-rate'),
+                    label: 'Heart rate',
+                    unit: 'bpm',
+                    value: s.heartRateBpm.toDouble(),
+                    min: kHeartRateMin.toDouble(),
+                    max: kHeartRateMax.toDouble(),
+                    step: 1,
+                    onChanged: (v) =>
+                        _setManualSensors(s.copyWith(heartRateBpm: v.round())),
+                  ),
+              ] else ...[
+                if (!s.cyclingPower)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      'Cycling Power is off (Settings › Sensors), so the '
+                      'profile’s power is not broadcast; its cadence still '
+                      'drives Speed & Cadence.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
                     ),
                   ),
-                ),
-              if (!_profileRunning)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(
-                    'While no profile is running, Test profile mode sends '
-                    '0 W and 0 rpm.',
-                    style: theme.textTheme.bodySmall,
+                if (!_profileRunning)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      'While no profile is running, Test profile mode sends '
+                      '0 W and 0 rpm.',
+                      style: theme.textTheme.bodySmall,
+                    ),
                   ),
-                ),
-              if (s.heartRate || s.speedCadence)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(
-                    'Profiles script power and cadence. Heart rate and speed '
-                    'keep their manual values.',
-                    style: theme.textTheme.bodySmall,
+                if (s.heartRate || s.speedCadence)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      'Profiles script power and cadence. Heart rate and speed '
+                      'keep their manual values.',
+                      style: theme.textTheme.bodySmall,
+                    ),
                   ),
+                ProfilePlayerView(
+                  profile: shownProfile,
+                  running: _profileRunning,
+                  elapsedSec: _profileElapsed,
+                  canRun: _advertising,
+                  onRun: _startProfile,
+                  onStop: _stopProfile,
+                  onChangeProfile: _openProfilePicker,
                 ),
-              ProfilePlayerView(
-                profile: shownProfile,
-                running: _profileRunning,
-                elapsedSec: _profileElapsed,
-                canRun: _advertising,
-                onRun: _startProfile,
-                onStop: _stopProfile,
-                onChangeProfile: _openProfilePicker,
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
       // Always visible: the main action and what just happened.
@@ -704,49 +713,51 @@ class _BroadcastBar extends StatelessWidget {
       elevation: 3,
       child: SafeArea(
         top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (status.isNotEmpty) ...[
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (isProblem) ...[
-                      Icon(
-                        Icons.error_outline,
-                        size: 16,
-                        color: theme.colorScheme.error,
-                      ),
-                      const SizedBox(width: 6),
-                    ],
-                    Expanded(
-                      child: Text(
-                        status,
-                        key: const ValueKey('status'),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: isProblem ? theme.colorScheme.error : null,
+        child: ReadableWidth(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (status.isNotEmpty) ...[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (isProblem) ...[
+                        Icon(
+                          Icons.error_outline,
+                          size: 16,
+                          color: theme.colorScheme.error,
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      Expanded(
+                        child: Text(
+                          status,
+                          key: const ValueKey('status'),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: isProblem ? theme.colorScheme.error : null,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                FilledButton.icon(
+                  onPressed: supported ? onToggle : null,
+                  icon: Icon(advertising ? Icons.stop : Icons.bluetooth),
+                  label: Text(advertising ? 'Stop' : 'Start advertising'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: advertising ? Colors.red.shade700 : null,
+                  ),
                 ),
-                const SizedBox(height: 8),
               ],
-              FilledButton.icon(
-                onPressed: supported ? onToggle : null,
-                icon: Icon(advertising ? Icons.stop : Icons.bluetooth),
-                label: Text(advertising ? 'Stop' : 'Start advertising'),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: advertising ? Colors.red.shade700 : null,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

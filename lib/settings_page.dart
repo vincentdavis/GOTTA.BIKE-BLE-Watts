@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'device_identity.dart';
+import 'layout.dart';
 import 'presets.dart';
 import 'sensor_config.dart';
 
@@ -96,108 +97,112 @@ class _SettingsPageState extends State<SettingsPage> {
     final canAdd = _items.length < kMaxPresets;
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          if (widget.onSensorsChanged != null) ...[
-            _SensorsSection(
-              sensors: widget.sensors,
-              advertising: widget.advertising,
-              onChanged: widget.onSensorsChanged!,
+      body: LayoutBuilder(
+        builder: (context, constraints) => ListView(
+          padding: readablePadding(context, constraints.maxWidth),
+          children: [
+            if (widget.onSensorsChanged != null) ...[
+              _SensorsSection(
+                sensors: widget.sensors,
+                advertising: widget.advertising,
+                onChanged: widget.onSensorsChanged!,
+              ),
+              const SizedBox(height: 8),
+              const Divider(),
+              const SizedBox(height: 8),
+            ],
+            if (widget.onScreenOffChanged != null) ...[
+              Text('Screen off', style: theme.textTheme.titleMedium),
+              SwitchListTile(
+                key: const ValueKey('screen-off'),
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Keep broadcasting with screen off'),
+                subtitle: const Text(
+                  'While broadcasting, the screen stays on as long as the app '
+                  'is open. Turn this on to also keep broadcasting if the '
+                  'screen turns off or you switch apps. A notification with a '
+                  'Stop button shows while it runs. Uses more battery.',
+                ),
+                value: _screenOff,
+                onChanged: (value) {
+                  setState(() => _screenOff = value);
+                  widget.onScreenOffChanged!(value);
+                },
+              ),
+              const SizedBox(height: 8),
+              const Divider(),
+              const SizedBox(height: 8),
+            ],
+            Text('Device identity', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(
+              'How the sensor appears to Zwift and other apps. Cosmetic — it does '
+              'not affect measurements. The MAC address is set by the phone and '
+              'cannot be changed.',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            _DeviceIdentitySection(
+              identity: widget.identity,
+              onChanged: widget.onIdentityChanged,
             ),
             const SizedBox(height: 8),
             const Divider(),
             const SizedBox(height: 8),
+            Text('Quick-select levels', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(
+              'Define up to $kMaxPresets (power, cadence) presets. They appear as '
+              'chips on the main screen — tap one to set the current level.',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 16),
+            if (_items.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 32),
+                child: Center(
+                  child: Text(
+                    'No presets. Add one below.',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ),
+              ),
+            for (var i = 0; i < _items.length; i++)
+              Card(
+                child: ListTile(
+                  leading: CircleAvatar(child: Text('${i + 1}')),
+                  title: Text(_items[i].displayLabel),
+                  subtitle: Text(
+                    '${_items[i].power} W · ${_items[i].cadence} rpm',
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined),
+                        tooltip: 'Edit',
+                        onPressed: () => _edit(index: i),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        tooltip: 'Delete',
+                        onPressed: () => _delete(i),
+                      ),
+                    ],
+                  ),
+                  onTap: () => _edit(index: i),
+                ),
+              ),
+            const SizedBox(height: 12),
+            FilledButton.tonalIcon(
+              onPressed: canAdd ? () => _edit() : null,
+              icon: const Icon(Icons.add),
+              label: Text(
+                canAdd ? 'Add preset' : 'Maximum $kMaxPresets presets',
+              ),
+            ),
           ],
-          if (widget.onScreenOffChanged != null) ...[
-            Text('Screen off', style: theme.textTheme.titleMedium),
-            SwitchListTile(
-              key: const ValueKey('screen-off'),
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Keep broadcasting with screen off'),
-              subtitle: const Text(
-                'While broadcasting, the screen stays on as long as the app '
-                'is open. Turn this on to also keep broadcasting if the '
-                'screen turns off or you switch apps. A notification with a '
-                'Stop button shows while it runs. Uses more battery.',
-              ),
-              value: _screenOff,
-              onChanged: (value) {
-                setState(() => _screenOff = value);
-                widget.onScreenOffChanged!(value);
-              },
-            ),
-            const SizedBox(height: 8),
-            const Divider(),
-            const SizedBox(height: 8),
-          ],
-          Text('Device identity', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text(
-            'How the sensor appears to Zwift and other apps. Cosmetic — it does '
-            'not affect measurements. The MAC address is set by the phone and '
-            'cannot be changed.',
-            style: theme.textTheme.bodySmall,
-          ),
-          const SizedBox(height: 12),
-          _DeviceIdentitySection(
-            identity: widget.identity,
-            onChanged: widget.onIdentityChanged,
-          ),
-          const SizedBox(height: 8),
-          const Divider(),
-          const SizedBox(height: 8),
-          Text('Quick-select levels', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text(
-            'Define up to $kMaxPresets (power, cadence) presets. They appear as '
-            'chips on the main screen — tap one to set the current level.',
-            style: theme.textTheme.bodySmall,
-          ),
-          const SizedBox(height: 16),
-          if (_items.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 32),
-              child: Center(
-                child: Text(
-                  'No presets. Add one below.',
-                  style: theme.textTheme.bodyMedium,
-                ),
-              ),
-            ),
-          for (var i = 0; i < _items.length; i++)
-            Card(
-              child: ListTile(
-                leading: CircleAvatar(child: Text('${i + 1}')),
-                title: Text(_items[i].displayLabel),
-                subtitle: Text(
-                  '${_items[i].power} W · ${_items[i].cadence} rpm',
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined),
-                      tooltip: 'Edit',
-                      onPressed: () => _edit(index: i),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      tooltip: 'Delete',
-                      onPressed: () => _delete(i),
-                    ),
-                  ],
-                ),
-                onTap: () => _edit(index: i),
-              ),
-            ),
-          const SizedBox(height: 12),
-          FilledButton.tonalIcon(
-            onPressed: canAdd ? () => _edit() : null,
-            icon: const Icon(Icons.add),
-            label: Text(canAdd ? 'Add preset' : 'Maximum $kMaxPresets presets'),
-          ),
-        ],
+        ),
       ),
     );
   }

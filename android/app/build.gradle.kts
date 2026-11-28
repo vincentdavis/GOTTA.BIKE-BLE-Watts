@@ -28,10 +28,16 @@ android {
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "ble.make.bike.gotta"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        // Pinned, not Flutter's defaults, so a Flutter upgrade can't silently
+        // change which phones can install the app or how Android treats it.
+        // minSdk 24 (Android 7.0): BLE advertising works there, and old
+        // spare phones are a common choice for a sensor on a trainer.
+        // targetSdk 36 (Android 16): what Google Play requires for new apps
+        // and updates since 2026-08-31. Raise it deliberately each year and
+        // re-test (Android 17 / API 37 drops the large-screen orientation
+        // and resizability opt-outs). See store/release-checklist.md.
+        minSdk = 24
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

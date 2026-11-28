@@ -28,6 +28,20 @@
     <uses-feature
         android:name="android.hardware.bluetooth_le"
         android:required="true" />
+    <!-- ACCESS_FINE_LOCATION (Android 11 and lower only, for BLE) makes Play
+         assume GPS hardware is required, which would hide the app from
+         Wi-Fi-only tablets. The app never reads location. -->
+    <uses-feature
+        android:name="android.hardware.location"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.location.gps"
+        android:required="false" />
+    <!-- Flutter apps imply a touchscreen; don't require one, so Chromebooks
+         and devices with a keyboard or mouse can install it too. -->
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
 
     <application
         android:label="GOTTA.BIKE: BLE Watts"

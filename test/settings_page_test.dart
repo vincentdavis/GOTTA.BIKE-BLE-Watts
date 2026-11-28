@@ -62,7 +62,13 @@ void main() {
     expect(find.text('Manufacturer'), findsOneWidget);
     expect(find.text('Model number'), findsOneWidget);
     expect(find.textContaining('Bluetooth address'), findsOneWidget);
-    expect(find.text('Endurance'), findsOneWidget); // presets still there
+    // Presets still there, below the fold of the lazy list.
+    await tester.scrollUntilVisible(
+      find.text('Endurance'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Endurance'), findsOneWidget);
     expect(find.text('Sensors'), findsNothing); // no sensor callback given
     expect(find.text('Screen off'), findsNothing); // not supported here
 

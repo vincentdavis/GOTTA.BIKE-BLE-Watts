@@ -89,8 +89,12 @@ void main() {
         );
   });
 
-  Future<void> pumpApp(WidgetTester tester) async {
-    tester.view.physicalSize = const Size(1080, 2400); // 360x800
+  /// [size] is in logical pixels; the default is a 360x800 phone.
+  Future<void> pumpApp(
+    WidgetTester tester, {
+    Size size = const Size(360, 800),
+  }) async {
+    tester.view.physicalSize = size * 3.0;
     tester.view.devicePixelRatio = 3.0;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(const CpsEmulatorApp());
@@ -170,5 +174,56 @@ void main() {
     expect(advertiser.powers.every((p) => p == 0), isTrue);
     expect(find.text('Stop profile', skipOffstage: false), findsNothing);
     await stopIfAdvertising(tester);
+  });
+
+  group('large and landscape screens', () {
+    // A 10-inch tablet in landscape: the content is centred at a readable
+    // width instead of stretching across the screen.
+    testWidgets('a tablet centres the main screen and Settings', (
+      tester,
+    ) async {
+      await pumpApp(tester, size: const Size(1280, 800));
+      final start = tester.getRect(find.text('Start advertising'));
+      final button = tester.getRect(
+        find.ancestor(
+          of: find.text('Start advertising'),
+          matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
+        ),
+      );
+      expect(button.width, lessThanOrEqualTo(720));
+      expect(button.center.dx, closeTo(640, 1));
+      expect(start.center.dx, closeTo(640, 30));
+      final modes = tester.getRect(
+        find.byWidgetPredicate((w) => w is SegmentedButton).first,
+      );
+      expect(modes.width, lessThanOrEqualTo(720));
+      expect(modes.center.dx, closeTo(640, 1));
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.byTooltip('Settings'));
+      await tester.pumpAndSettle();
+      final list = tester.widget<ListView>(find.byType(ListView).first);
+      final padding = list.padding!.resolve(TextDirection.ltr);
+      expect(padding.left, 280); // (1280 - 720) / 2
+      expect(padding.right, 280);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a phone in landscape keeps Start reachable', (tester) async {
+      await pumpApp(tester, size: const Size(800, 360));
+      final start = find.text('Start advertising');
+      expect(start.hitTestable(), findsOneWidget);
+      expect(tester.getRect(start).bottom, lessThanOrEqualTo(360));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a narrow foldable cover screen has no overflow', (
+      tester,
+    ) async {
+      await pumpApp(tester, size: const Size(320, 720));
+      await tapText(tester, 'Test profile');
+      expect(find.text('Start advertising').hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   });
 }

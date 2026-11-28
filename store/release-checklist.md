@@ -122,6 +122,12 @@ keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab
       device type). Show only this app's UI, with no third-party logos.
       Good shots: the main screen while broadcasting, Test-profile mode with
       the chart, the profile picker, and Settings.
+- [ ] Add **tablet screenshots** too (7-inch and 10-inch), or Play won't
+      list the app as made for tablets and may rank it lower there. Take
+      them on a tablet emulator (for example Pixel Tablet, landscape and
+      portrait): content is centred at a readable width, Dual record shows
+      both cards side by side. **Verify** the current tablet asset sizes on
+      the Preview assets page.
 - [ ] Category **Tools** (reasoning in `listing.md`), up to 5 tags, and
       contact email, website and privacy-policy URL.
 
@@ -182,11 +188,20 @@ keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab
 
 - [ ] Since **August 31, 2026**, new apps and app updates must target
       **Android 16 (API level 36)** or higher (you can request an extension
-      to November 1, 2026). This project targets API 36 through Flutter's
-      default `targetSdkVersion`. After a Flutter upgrade, confirm it in the
-      merged manifest under
-      `build/app/intermediates/merged_manifest/release/`. **Verify** the rule
-      again before each yearly deadline.
+      to November 1, 2026). This project pins `targetSdk = 36` and
+      `minSdk = 24` in `android/app/build.gradle.kts` (not Flutter's
+      defaults), so a Flutter upgrade does not change them. **Verify** the
+      rule again before each yearly deadline (expect API 37 / Android 17 by
+      about August 2027) and raise `targetSdk` on purpose, then re-test on a
+      phone, a tablet and a foldable emulator: from API 37, large screens
+      ignore orientation and resizability limits with no opt-out.
+- [ ] **Device catalog** (Release › Device catalog): after the first
+      upload, check that tablets, foldables and Chromebooks with Bluetooth
+      LE are listed as supported. Only `android.hardware.bluetooth_le` is
+      required; location, GPS and touchscreen are declared optional so
+      Wi-Fi-only tablets aren't filtered out. Phones without a BLE
+      advertiser can still install it; the app reports at runtime that
+      peripheral mode isn't supported (Dual record still works).
 
 ## 12. Release to production
 
