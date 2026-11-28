@@ -11,8 +11,8 @@ library;
 
 import 'dart:convert';
 import 'dart:math' as math;
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:universal_ble/universal_ble.dart';
 
 import 'cpm_codec.dart';
@@ -23,6 +23,21 @@ import 'sensor_config.dart';
 
 /// Emulates standard BLE cycling sensors ("GOTTA.BIKE Watts" by default).
 class CyclingPowerPeripheral {
+  /// [windows] defaults to the current platform; tests pass it explicitly.
+  CyclingPowerPeripheral({bool? windows})
+    : _windows =
+          windows ??
+          (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows);
+
+  /// Windows advertises through `GattServiceProvider`, which can't put a
+  /// local name in the advertisement and only publishes a service to
+  /// connected centrals once that service's provider is advertising.
+  final bool _windows;
+
+  /// Whether [deviceName] goes into the advertisement. False on Windows,
+  /// where centrals see the PC's own Bluetooth name (or no name).
+  bool get canAdvertiseName => !_windows;
+
   // 16-bit SIG UUIDs expanded onto the Bluetooth Base UUID. Centrals report
   // 128-bit lowercase UUIDs, so compare with [BleUuidParser.compareStrings].
   // Characteristic UUIDs are unique across all services here, because the
@@ -56,7 +71,8 @@ class CyclingPowerPeripheral {
   static const String cscFeatureChar =
       '00002a5c-0000-1000-8000-00805f9b34fb'; // Feature (read)
 
-  // Device Information Service (always registered, never advertised).
+  // Device Information Service (always registered; advertised only on
+  // Windows, where an unadvertised service isn't published at all).
   static const String disService = '0000180a-0000-1000-8000-00805f9b34fb';
   static const String manufacturerChar =
       '00002a29-0000-1000-8000-00805f9b34fb'; // Manufacturer Name String (read)
@@ -254,11 +270,16 @@ class CyclingPowerPeripheral {
   /// Note: on Android `universal_ble` puts the name into the advertisement by
   /// temporarily renaming the phone's Bluetooth adapter; it restores the
   /// original name when advertising stops.
+  ///
+  /// On Windows no name is sent ([canAdvertiseName]) and Device Information
+  /// is advertised too, because Windows only publishes the services whose
+  /// provider is advertising. Its advertisement has room for it: there is no
+  /// name to share the 31 bytes with.
   Future<void> startAdvertising() async {
     await _setupQueue; // let a pending service change finish first
     return UniversalBlePeripheral.startAdvertising(
-      services: advertisedServices,
-      localName: advertisedName,
+      services: [...advertisedServices, if (_windows) disService],
+      localName: canAdvertiseName ? advertisedName : null,
     );
   }
 

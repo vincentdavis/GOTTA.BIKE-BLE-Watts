@@ -95,6 +95,12 @@ page. To install on a phone, download the `.apk` from there. Every push to
 `main` also runs the tests and a build on GitHub (CI). Details:
 [`store/release-checklist.md`](store/release-checklist.md#releases-on-github).
 
+**Windows:** a Windows 10/11 build (installer and portable zip) is built on
+GitHub for every push and PR, since Flutter can't build it on a Mac. It
+broadcasts and dual-records like the phone app, but Windows can't advertise
+a custom name. Building, the release step and code signing:
+[`store/windows-distribution.md`](store/windows-distribution.md).
+
 The launcher icons and Play graphics use a **placeholder** mark (a lightning
 bolt between broadcast arcs). `python3 assets/icon/generate_icon.py`
 regenerates them; see that script to swap in the real GOTTA.BIKE artwork.

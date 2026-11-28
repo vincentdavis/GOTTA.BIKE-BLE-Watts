@@ -1,0 +1,101 @@
+# Builds the Windows app (installer + portable zip) on a Windows runner,
+# because Flutter can't cross-compile Windows apps from the Mac.
+#
+# - Every push to main and every pull request: build and keep the files as
+#   a workflow artifact for 14 days (for testing).
+# - Run it by hand (Actions > Windows > Run workflow) with `release_tag` set
+#   to an existing release, e.g. v1.2.0 made by tool/release.sh, to attach
+#   the installer, the zip and SHA256SUMS-windows.txt to that release.
+#
+# Nothing here is tag-triggered and it never creates a release: releases
+# still start from tool/release.sh. The files are NOT code-signed yet; see
+# store/windows-distribution.md.
+name: Windows
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing release tag to attach the Windows files to (e.g. v1.2.0); leave empty to only build"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.ref }}-${{ inputs.release_tag || 'build' }}
+  cancel-in-progress: true
+
+env:
+  # Keep in step with FLUTTER_VERSION in ci.yml and the local Flutter.
+  FLUTTER_VERSION: "3.44.7"
+
+jobs:
+  build:
+    name: Build Windows installer
+    runs-on: windows-latest
+    timeout-minutes: 40
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.release_tag || github.sha }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Version
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ inputs.release_tag }}"
+          if ($tag) {
+            $v = $tag.TrimStart("v")
+          } else {
+            $v = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(\d+\.\d+\.\d+)').Matches[0].Groups[1].Value
+          }
+          "version=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Build installer and zip
+        shell: pwsh
+        run: ./tool/build_windows.ps1 -Version ${{ steps.version.outputs.version }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows-unsigned-${{ steps.version.outputs.version }}-${{ github.sha }}
+          path: build/windows/dist/*
+          retention-days: 14
+
+  attach:
+    name: Attach to release ${{ inputs.release_tag }}
+    if: inputs.release_tag != ''
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Download the build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NAME: windows-unsigned-${{ needs.build.outputs.version }}-${{ github.sha }}
+        run: gh run download "$GITHUB_RUN_ID" --name "$NAME" --dir dist --repo "$GITHUB_REPOSITORY"
+
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+        run: gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"

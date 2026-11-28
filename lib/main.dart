@@ -237,6 +237,10 @@ class _EmulatorPageState extends State<EmulatorPage> {
   }
 
   String _advertisingStatus() {
+    if (!_peripheral.canAdvertiseName) {
+      return 'Advertising. Windows can’t advertise a custom name, so apps '
+          'list this PC by its own Bluetooth name.';
+    }
     final name = _peripheral.advertisedName;
     return name == _peripheral.deviceName
         ? 'Advertising as "$name".'
@@ -445,6 +449,7 @@ class _EmulatorPageState extends State<EmulatorPage> {
           advertising: _advertising,
           onSensorsChanged: _applySensors,
           screenOff: _screenOffEnabled,
+          nameAdvertised: _peripheral.canAdvertiseName,
           onScreenOffChanged: _screenOffService.isSupported
               ? _setScreenOff
               : null,

@@ -20,6 +20,8 @@ records both to a CSV. Record-only, no rebroadcast (yet).
   `share_plus` (save Dual-record CSVs, share them)
 - Android only: a small native foreground service (Kotlin, no plugin) for
   the optional "keep broadcasting with screen off" mode.
+- Windows desktop (x64, Windows 10 1809+): same app, downloaded from the
+  website, not the Microsoft Store (`store/windows-distribution.md`).
 - Material 3, dark theme. No state-management package; plain `StatefulWidget`.
 
 ## Layout
@@ -43,7 +45,10 @@ records both to a CSV. Record-only, no rebroadcast (yet).
   (`0x2A5D`) / Body Sensor Location (`0x2A38`) / CSC Feature (`0x2A5C`) /
   Manufacturer (`0x2A29`) / Model (`0x2A24`), slicing long values by the
   request offset. Advertises only the enabled sensor services under
-  `advertisedName`, and `pushMeasurement` sends one notification per enabled
+  `advertisedName` (on Windows: no name, since `GattServiceProvider` can't
+  set one, and Device Information is advertised too, because Windows only
+  publishes advertising services; `canAdvertiseName` tells the UI), and
+  `pushMeasurement` sends one notification per enabled
   sensor, advancing the shared `CrankSimulator` once per tick.
 - `lib/main.dart` — UI with a Manual / Test-profile mode switch. Manual: +/-
   steppers for each enabled sensor — power (step 5 W), cadence (1 rpm), speed
@@ -94,7 +99,9 @@ records both to a CSV. Record-only, no rebroadcast (yet).
   `close`). It emits raw `SensorPacket`s only, so a future relay can reuse
   it with `cps_peripheral.dart`.
 - `lib/recording_files.dart` — saves CSVs to app documents `recordings/`
-  and opens the share sheet (`share_plus`). Tests fake it.
+  (Windows: `Documents\GOTTA.BIKE BLE Watts\recordings`, since app
+  documents is the user's Documents there) and opens the share sheet
+  (`share_plus`). Tests fake it.
 - `lib/dual_record_page.dart` — the Dual record screen: two slot cards,
   scan sheet, live values, comparison card, record/stop/share. Opened only
   while not advertising; leaving while recording asks, then stops and
@@ -147,6 +154,13 @@ records both to a CSV. Record-only, no rebroadcast (yet).
   PLACEHOLDER launcher icons and Play graphics and run
   `flutter_launcher_icons` (dev dependency) safely; never run that tool on
   its own (it corrupts `project.pbxproj`, see the yaml).
+- `windows/` — the Flutter Windows runner (exe `gotta_bike_ble_watts.exe`,
+  window title and version resource in `runner/`) and
+  `installer/setup.iss` (Inno Setup 6; never change its `AppId`).
+  `tool/build_windows.ps1` builds the release, copies the VC++ runtime DLLs
+  next to the exe and makes the installer, zip and `SHA256SUMS-windows.txt`
+  in `build/windows/dist/`. Windows versions are `X.Y.Z.0` (16-bit parts,
+  so no Android versionCode). Unsigned for now.
 - `store/` — Play listing, privacy policy (`.md` + hosted `.html`, keep in
   sync), Data safety and content-rating answers, release checklist, and the
   store graphics. Update them when permissions or features change.
@@ -214,6 +228,11 @@ records both to a CSV. Record-only, no rebroadcast (yet).
   tag and runs `gh release create` with APK + AAB + SHA256SUMS. Don't add a
   tag-triggered release workflow (the script refuses to run if
   `.github/workflows/release.yml` exists).
+  Windows can't be built on the Mac (Flutter doesn't cross-compile), so
+  `.github/workflows/windows.yml` builds it on a Windows runner for every
+  push to `main` / PR (artifact), and a manual run with `release_tag`
+  attaches the Windows files to an existing release made by `release.sh`.
+  It pins its own `FLUTTER_VERSION`: keep it equal to `ci.yml`'s.
 
 ## Testing constraints
 - BLE peripheral mode does NOT work in the iOS Simulator. A recent Android
@@ -243,6 +262,11 @@ records both to a CSV. Record-only, no rebroadcast (yet).
   Home. Swiping the app away or
   finishing the activity stops the service (the broadcast lives in the
   activity's engine). Still to verify on a physical phone with Zwift.
+- Windows: peripheral mode needs an adapter with the peripheral role
+  (`universal_ble` only checks that a radio exists, so an unsupported
+  adapter fails at setup / Start). Centrals see the PC's Bluetooth name,
+  not `deviceName`. Zwift on the same PC can't connect to the app (an
+  adapter doesn't connect to itself). Not yet tested on a real PC.
 - Dual record keeps the screen on while a sensor is connected or a recording
   runs, but has no screen-off mode: keep the app in front. Real sensors
   need the physical phone; the iOS Simulator has no Bluetooth.

@@ -41,6 +41,26 @@ bool switchLocked(WidgetTester tester, String key) =>
 final wheelField = find.byKey(const ValueKey('sensor-wheel'));
 
 void main() {
+  testWidgets('Windows: the name field says the name is not advertised', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(useMaterial3: true),
+        home: SettingsPage(
+          identity: DeviceIdentity.defaults,
+          onIdentityChanged: (_) {},
+          presets: const [],
+          onChanged: (_) {},
+          nameAdvertised: false,
+        ),
+      ),
+    );
+    expect(find.text('Device name'), findsOneWidget);
+    expect(find.text('Device name (advertised)'), findsNothing);
+    expect(find.textContaining('Windows can’t advertise'), findsOneWidget);
+  });
+
   testWidgets('renders identity fields + presets, and edits emit identity', (
     tester,
   ) async {
