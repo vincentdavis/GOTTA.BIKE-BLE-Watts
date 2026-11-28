@@ -129,7 +129,10 @@ keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab
 
 - [ ] **Privacy policy**: host `privacy-policy.html` at a public URL (for
       example GitHub Pages), fill in its effective date and contact
-      placeholders first, then paste the URL.
+      placeholders first, then paste the URL. The app links to
+      `https://ble.gotta.bike/privacy` from Settings › About (Play requires
+      an in-app link), so host it at that URL or change
+      `kPrivacyPolicyUrl` in `lib/settings_page.dart`.
 - [ ] **Ads**: no ads.
 - [ ] **App access**: all functionality is available without special access
       (no login).

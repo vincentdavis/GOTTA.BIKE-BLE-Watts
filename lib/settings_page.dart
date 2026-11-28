@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'device_identity.dart';
 import 'presets.dart';
 import 'sensor_config.dart';
+
+/// The hosted privacy policy, linked from Settings › About (Google Play
+/// requires an in-app link). Keep it in step with `store/privacy-policy.md`.
+const String kPrivacyPolicyUrl = 'https://ble.gotta.bike/privacy';
+
+/// Opens [url] in the browser; returns whether it could.
+Future<bool> openExternalUrl(Uri url) =>
+    launchUrl(url, mode: LaunchMode.externalApplication);
 
 /// Settings screen: the emulated sensors, screen-off broadcasting, the BLE
 /// device identity and the quick-select presets.
@@ -22,6 +31,7 @@ class SettingsPage extends StatefulWidget {
     this.onSensorsChanged,
     this.screenOff = false,
     this.onScreenOffChanged,
+    this.openUrl = openExternalUrl,
   });
 
   final DeviceIdentity identity;
@@ -43,6 +53,9 @@ class SettingsPage extends StatefulWidget {
   final bool screenOff;
   final ValueChanged<bool>? onScreenOffChanged;
 
+  /// Opens a link (the privacy policy); replaceable in tests.
+  final Future<bool> Function(Uri url) openUrl;
+
   @override
   State<SettingsPage> createState() => _SettingsPageState();
 }
@@ -52,6 +65,26 @@ class _SettingsPageState extends State<SettingsPage> {
   late bool _screenOff = widget.screenOff;
 
   void _commit() => widget.onChanged(List.of(_items));
+
+  /// Opens the privacy policy; if no browser can, copies the link instead.
+  Future<void> _openPrivacyPolicy() async {
+    var opened = false;
+    try {
+      opened = await widget.openUrl(Uri.parse(kPrivacyPolicyUrl));
+    } catch (_) {}
+    if (opened || !mounted) return;
+    await Clipboard.setData(const ClipboardData(text: kPrivacyPolicyUrl));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Couldn’t open a browser. The link is copied: $kPrivacyPolicyUrl',
+          ),
+        ),
+      );
+  }
 
   Future<void> _edit({int? index}) async {
     final result = await showDialog<Preset>(
@@ -196,6 +229,19 @@ class _SettingsPageState extends State<SettingsPage> {
             onPressed: canAdd ? () => _edit() : null,
             icon: const Icon(Icons.add),
             label: Text(canAdd ? 'Add preset' : 'Maximum $kMaxPresets presets'),
+          ),
+          const SizedBox(height: 16),
+          const Divider(),
+          const SizedBox(height: 8),
+          Text('About', style: theme.textTheme.titleMedium),
+          ListTile(
+            key: const ValueKey('privacy-policy'),
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: const Text('Privacy policy'),
+            subtitle: const Text(kPrivacyPolicyUrl),
+            trailing: const Icon(Icons.open_in_new),
+            onTap: _openPrivacyPolicy,
           ),
         ],
       ),

@@ -17,7 +17,8 @@ records both to a CSV. Record-only, no rebroadcast (yet).
 - `wakelock_plus` (keep screen on while advertising / dual recording);
   `shared_preferences` (persist presets, device identity, profiles, the
   sensor selection and the screen-off setting); `path_provider` +
-  `share_plus` (save Dual-record CSVs, share them)
+  `share_plus` (save Dual-record CSVs, share them); `url_launcher` (the
+  Settings › About privacy-policy link)
 - Android only: a small native foreground service (Kotlin, no plugin) for
   the optional "keep broadcasting with screen off" mode.
 - Material 3, dark theme. No state-management package; plain `StatefulWidget`.
@@ -56,7 +57,13 @@ records both to a CSV. Record-only, no rebroadcast (yet).
   readout. A 500 ms timer (`_onTick`) pushes `_broadcastValues` each tick:
   the running profile; else 0 W / 0 rpm in Test profile mode (never an
   unseen manual value before a run or after a coast-down); else the manual
-  values. Stopping the broadcast (any reason) also ends a running profile,
+  values. Bluetooth readiness (`_init`) is re-runnable: Bluetooth off,
+  a refused permission or a failed setup shows "Try again" instead of a
+  dead Start button, and turning Bluetooth back on re-registers the
+  services. It waits out iOS's brief `unknown` peripheral state
+  (`readiness()`), and treats Android's `unsupported` while the adapter is
+  off as "Bluetooth is off". Stopping the broadcast (any reason) also ends
+  a running profile,
   so a run never silently resumes after a gap. `test/emulator_page_test.dart`
   drives the whole screen with fake BLE platforms.
 - `lib/presets.dart` — pure `Preset` (power, cadence) model + `PresetStore`
@@ -65,7 +72,9 @@ records both to a CSV. Record-only, no rebroadcast (yet).
 - `lib/settings_page.dart` — Settings screen: sensor switches (locked while
   advertising; the last one on can't be turned off) and wheel circumference,
   the screen-off switch (Android only; applies immediately), the device
-  identity (name, manufacturer, model), and add/edit/delete the presets.
+  identity (name, manufacturer, model), add/edit/delete the presets, and
+  About › Privacy policy (`kPrivacyPolicyUrl` = https://ble.gotta.bike/privacy;
+  Google Play requires an in-app link; copies the link if no browser opens).
 - `lib/screen_off_mode.dart` — "keep broadcasting with screen off":
   `ScreenOffService` (method channel `gotta.bike/keep_alive`),
   `KeepAwake` (serialised; while advertising it always holds the screen

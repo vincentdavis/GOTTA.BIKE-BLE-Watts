@@ -16,6 +16,16 @@ import 'fake_central_platform.dart';
 class FakeAdvertiser extends UniversalBlePeripheralUnsupported {
   bool advertising = false;
 
+  /// Readiness answers, one per call; the last one repeats.
+  List<PeripheralReadinessState> readiness = [PeripheralReadinessState.ready];
+
+  /// Services added, by 16-bit id (e.g. `1818`).
+  final added = <String>[];
+
+  @override
+  Future<PeripheralReadinessState> getAvailabilityState() async =>
+      readiness.length > 1 ? readiness.removeAt(0) : readiness.first;
+
   /// Power (W) of each Cycling Power Measurement sent.
   final powers = <int>[];
 
@@ -36,7 +46,7 @@ class FakeAdvertiser extends UniversalBlePeripheralUnsupported {
     PeripheralService service, {
     bool primary = true,
     Duration? timeout,
-  }) async {}
+  }) async => added.add(service.uuid.substring(4, 8).toLowerCase());
 
   @override
   Future<void> clearServices() async {}
@@ -72,12 +82,26 @@ class FakeAdvertiser extends UniversalBlePeripheralUnsupported {
       const [];
 }
 
+/// A central whose permission request can be refused.
+class PermissionCentral extends FakeCentralPlatform {
+  bool denyPermission = false;
+
+  @override
+  Future<void> requestPermissions({
+    bool withAndroidFineLocation = false,
+  }) async {
+    if (denyPermission) throw Exception('denied');
+  }
+}
+
 void main() {
   late FakeAdvertiser advertiser;
+  late PermissionCentral central;
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    UniversalBle.setInstance(FakeCentralPlatform());
+    central = PermissionCentral();
+    UniversalBle.setInstance(central);
     advertiser = FakeAdvertiser();
     UniversalBlePeripheral.setInstance(advertiser);
     // wakelock_plus: answer its pigeon "toggle" call with an empty success.
@@ -89,14 +113,16 @@ void main() {
         );
   });
 
-  Future<void> pumpApp(WidgetTester tester) async {
+  Future<void> pumpApp(WidgetTester tester, {bool expectReady = true}) async {
     tester.view.physicalSize = const Size(1080, 2400); // 360x800
     tester.view.devicePixelRatio = 3.0;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(const CpsEmulatorApp());
     await tester.pump(const Duration(milliseconds: 50));
     await tester.pump(const Duration(milliseconds: 50));
-    expect(find.text('Ready. Tap Start to advertise.'), findsOneWidget);
+    if (expectReady) {
+      expect(find.text('Ready. Tap Start to advertise.'), findsOneWidget);
+    }
   }
 
   Future<void> tapText(WidgetTester tester, String text) async {
@@ -170,5 +196,88 @@ void main() {
     expect(advertiser.powers.every((p) => p == 0), isTrue);
     expect(find.text('Stop profile', skipOffstage: false), findsNothing);
     await stopIfAdvertising(tester);
+  });
+
+  group('getting Bluetooth ready', () {
+    const ready = 'Ready. Tap Start to advertise.';
+
+    testWidgets('Bluetooth off at launch: says so, then gets ready when on', (
+      tester,
+    ) async {
+      central.availability = AvailabilityState.poweredOff;
+      // Android reports "unsupported" while the adapter is off.
+      advertiser.readiness = [PeripheralReadinessState.unsupported];
+      await pumpApp(tester, expectReady: false);
+      expect(find.textContaining('Bluetooth is off'), findsOneWidget);
+      expect(find.textContaining('not supported'), findsNothing);
+      expect(find.text('Try again'), findsOneWidget);
+
+      central.availability = AvailabilityState.poweredOn;
+      advertiser.readiness = [PeripheralReadinessState.ready];
+      central.updateAvailability(AvailabilityState.poweredOn);
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.text(ready), findsOneWidget);
+      expect(find.text('Start advertising'), findsOneWidget);
+    });
+
+    testWidgets('waits for iOS to leave the unknown state', (tester) async {
+      advertiser.readiness = [
+        PeripheralReadinessState.unknown,
+        PeripheralReadinessState.unknown,
+        PeripheralReadinessState.ready,
+      ];
+      await pumpApp(tester, expectReady: false);
+      expect(advertiser.added, isEmpty); // nothing added while unknown
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.text(ready), findsOneWidget);
+      expect(advertiser.added, ['180a', '1818']);
+    });
+
+    testWidgets('a refused permission can be retried', (tester) async {
+      central.denyPermission = true;
+      await pumpApp(tester, expectReady: false);
+      expect(find.textContaining('permission is needed'), findsOneWidget);
+
+      central.denyPermission = false;
+      await tapText(tester, 'Try again');
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.text(ready), findsOneWidget);
+    });
+
+    testWidgets('a device without peripheral support offers no retry', (
+      tester,
+    ) async {
+      advertiser.readiness = [PeripheralReadinessState.unsupported];
+      await pumpApp(tester, expectReady: false);
+      expect(find.textContaining('not supported'), findsOneWidget);
+      expect(find.text('Try again'), findsNothing);
+      final button = tester.widget<ButtonStyleButton>(
+        find.ancestor(
+          of: find.text('Start advertising'),
+          matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
+        ),
+      );
+      expect(button.onPressed, isNull);
+    });
+
+    testWidgets('Bluetooth off while advertising stops, and re-registers', (
+      tester,
+    ) async {
+      await pumpApp(tester);
+      await tapText(tester, 'Start advertising');
+      advertiser.added.clear();
+      central.updateAvailability(AvailabilityState.poweredOff);
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.textContaining('Bluetooth was turned off'), findsOneWidget);
+      expect(find.text('Try again'), findsOneWidget);
+
+      central.updateAvailability(AvailabilityState.poweredOn);
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.text(ready), findsOneWidget);
+      expect(advertiser.added, ['180a', '1818']); // services set up again
+    });
   });
 }
