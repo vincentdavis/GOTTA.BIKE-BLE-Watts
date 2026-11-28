@@ -17,7 +17,8 @@ records both to a CSV. Record-only, no rebroadcast (yet).
 - `wakelock_plus` (keep screen on while advertising / dual recording);
   `shared_preferences` (persist presets, device identity, profiles, the
   sensor selection and the screen-off setting); `path_provider` +
-  `share_plus` (save Dual-record CSVs, share them)
+  `share_plus` (save Dual-record CSVs, share them); `url_launcher` (the
+  Settings › About privacy-policy link)
 - Android only: a small native foreground service (Kotlin, no plugin) for
   the optional "keep broadcasting with screen off" mode.
 - Material 3, dark theme. No state-management package; plain `StatefulWidget`.
@@ -71,7 +72,9 @@ records both to a CSV. Record-only, no rebroadcast (yet).
 - `lib/settings_page.dart` — Settings screen: sensor switches (locked while
   advertising; the last one on can't be turned off) and wheel circumference,
   the screen-off switch (Android only; applies immediately), the device
-  identity (name, manufacturer, model), and add/edit/delete the presets.
+  identity (name, manufacturer, model), add/edit/delete the presets, and
+  About › Privacy policy (`kPrivacyPolicyUrl` = https://ble.gotta.bike/privacy;
+  Google Play requires an in-app link; copies the link if no browser opens).
 - `lib/screen_off_mode.dart` — "keep broadcasting with screen off":
   `ScreenOffService` (method channel `gotta.bike/keep_alive`),
   `KeepAwake` (serialised; while advertising it always holds the screen

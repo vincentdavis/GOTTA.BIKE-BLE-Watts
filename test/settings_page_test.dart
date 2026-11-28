@@ -3,6 +3,7 @@ import 'package:cps_emulator/presets.dart';
 import 'package:cps_emulator/sensor_config.dart';
 import 'package:cps_emulator/settings_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Pumps Settings on a small phone and returns every emitted sensor config.
@@ -193,6 +194,71 @@ void main() {
       expect(find.text('210'), findsOneWidget); // letters are dropped
       expect(find.text('Enter 1000–3000 mm'), findsOneWidget);
       expect(emitted, hasLength(1));
+    });
+  });
+
+  group('privacy policy link', () {
+    Future<void> pumpAbout(
+      WidgetTester tester,
+      Future<bool> Function(Uri) openUrl,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SettingsPage(
+            identity: DeviceIdentity.defaults,
+            onIdentityChanged: (_) {},
+            presets: PresetStore.defaults,
+            onChanged: (_) {},
+            openUrl: openUrl,
+          ),
+        ),
+      );
+      final link = find.byKey(const ValueKey('privacy-policy'));
+      await tester.scrollUntilVisible(
+        link,
+        200,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.tap(link);
+      await tester.pump();
+    }
+
+    testWidgets('opens the hosted policy', (tester) async {
+      final opened = <Uri>[];
+      await pumpAbout(tester, (url) async {
+        opened.add(url);
+        return true;
+      });
+      expect(opened, [Uri.parse('https://ble.gotta.bike/privacy')]);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('copies the link when no browser opens', (tester) async {
+      String? copied;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            copied = (call.arguments as Map)['text'] as String?;
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      await pumpAbout(tester, (_) async => false);
+      await tester.pump();
+      expect(copied, 'https://ble.gotta.bike/privacy');
+      expect(find.textContaining('link is copied'), findsOneWidget);
     });
   });
 }
