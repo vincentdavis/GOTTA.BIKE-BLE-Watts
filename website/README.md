@@ -17,20 +17,20 @@ Cloudflare Pages serves `privacy.html` at `/privacy` (it strips `.html`),
 so give the stores the extensionless URLs above. `_redirects` adds
 `/privacy-policy`, `/tos`, `/mac` (latest Mac DMG) and `/releases`.
 
-## Before the first deploy: fill in the placeholders
+## Site details and placeholders
 
-Placeholders are in square brackets and highlighted yellow on the page.
-`tool/check_website.sh` lists them and fails while any remain (it is the
-Cloudflare build command, so a deploy can't go out with them).
+All details are filled in: contact `ble-watts@gotta.bike`, developer
+**Vincent Davis**, terms governed by the laws of the State of Colorado,
+USA, and an effective date of November 28, 2026 on the privacy policy and
+terms (change both dates whenever their content changes).
 
-| Placeholder | Where | Notes |
-|---|---|---|
-| `[EFFECTIVE DATE]` | privacy, terms | The date you publish. |
-| `[GOVERNING LAW JURISDICTION]` | terms | For example "the State of Colorado, USA". |
+If you add a placeholder later, write it in square brackets inside
+`<span class="ph">`, which highlights it yellow on the page.
+`tool/check_website.sh` lists any such placeholder and fails while one
+remains. It is the Cloudflare build command, so a deploy can't go out with
+one.
 
-The contact email is `ble-watts@gotta.bike` (all pages, `mailto:` links)
-and the developer is **Vincent Davis** (must match the developer name on
-App Store Connect and Play Console).
+The developer name must match App Store Connect and Play Console.
 
 When each store build goes live, delete its "Coming soon" line in the
 Download section of `index.html`. The App Store button is a plain
